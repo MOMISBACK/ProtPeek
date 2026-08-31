@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; img-src 'self' data:; script-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    >
+    <meta
+      name="description"
+      content="Privacy Policy for the ProtPeek browser extension."
+    >
+    <link rel="canonical" href="https://momisback.github.io/ProtPeek/privacy/">
+    <link rel="stylesheet" href="../styles.css">
+    <title>Privacy Policy · ProtPeek</title>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="../">ProtPeek</a>
+      <nav aria-label="Primary navigation">
+        <a aria-current="page" href="./">Privacy</a>
+        <a href="https://github.com/MOMISBACK/ProtPeek">Source</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Privacy Policy</h1>
+      <p class="meta">Last updated: 1 September 2026 · Applies to ProtPeek 0.1.0</p>
+
+      <div class="callout">
+        ProtPeek has no user accounts, analytics, advertising, tracking,
+        telemetry, profiling, or ProtPeek-operated backend. It does not sell
+        personal data.
+      </div>
+
+      <h2>Local-first processing</h2>
+      <p>
+        ProtPeek packages all executable code, including Mol*, with the
+        extension. Article scanning, identifier parsing, local-file reading,
+        molecular processing, rendering, selections, colours, and structure
+        export run on the user's device. ProtPeek never uploads local structure
+        files or downloads executable code at runtime.
+      </p>
+
+      <h2>Article access</h2>
+      <p>
+        After the user clicks the ProtPeek toolbar action, the browser grants
+        temporary access to the active tab. ProtPeek locally inspects a bounded
+        snapshot of the main document's visible text, links, metadata, page
+        URL, and JSON-LD to detect contextual PDB references. Only compact
+        detection results return to the extension background; the page
+        snapshot is not sent to ProtPeek, RCSB, AlphaFold, or another server.
+      </p>
+      <p>
+        While the panel is open, a tab already authorised by the browser may be
+        rescanned when activated or after it finishes loading. A newly visited
+        tab requires another explicit toolbar click.
+      </p>
+
+      <h2>Remote structure requests</h2>
+      <p>
+        Loading a remote identifier necessarily sends that identifier to the
+        official structure provider selected by the request. Requests omit
+        extension-supplied credentials.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Host</th>
+            <th scope="col">When contacted</th>
+            <th scope="col">Data sent</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">models.rcsb.org</th>
+            <td>Explicit PDB load</td>
+            <td>PDB identifier in a BinaryCIF request path</td>
+          </tr>
+          <tr>
+            <th scope="row">files.rcsb.org</th>
+            <td>BinaryCIF fallback</td>
+            <td>PDB identifier in an mmCIF request path</td>
+          </tr>
+          <tr>
+            <th scope="row">alphafold.ebi.ac.uk</th>
+            <td>Explicit UniProt or AlphaFold load</td>
+            <td>Accession and official structure-file request</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Providers and network intermediaries may receive standard request data
+        such as the IP address, request time, user agent, and transport headers
+        under their own policies. ProtPeek does not receive a copy.
+      </p>
+
+      <h2>Local files and downloads</h2>
+      <p>
+        CIF, mmCIF, BinaryCIF, and PDB files chosen or dropped by the user are
+        read and rendered locally. The download control creates a local
+        PDBx/mmCIF file from the currently visible molecular structure; this
+        does not send the structure to a server.
+      </p>
+
+      <h2>Storage and retention</h2>
+      <p>
+        ProtPeek uses browser-managed session storage only to coordinate compact
+        page detections, the source tab identifier, an identifier selected for
+        loading, or a scan error between its background and side-panel
+        documents. Context-menu load values are removed after consumption, and
+        scan values are overwritten as the active context changes.
+      </p>
+      <p>
+        Structures, local-file contents, selections, and viewer state remain in
+        memory and are discarded when replaced or when the panel document is
+        destroyed. ProtPeek adds no application database. The browser's normal
+        HTTP cache may retain provider responses.
+      </p>
+
+      <h2>Permissions</h2>
+      <ul>
+        <li><strong>activeTab:</strong> temporary page access after a user gesture.</li>
+        <li><strong>scripting:</strong> one-shot injection of the bounded article scanner.</li>
+        <li><strong>contextMenus:</strong> explicit “View in ProtPeek” selection workflow.</li>
+        <li><strong>storage:</strong> session-scoped background/panel coordination.</li>
+        <li><strong>sidePanel:</strong> Chromium's native side-panel surface.</li>
+        <li><strong>Exact provider hosts:</strong> download user-requested structure data.</li>
+      </ul>
+      <p>
+        ProtPeek does not request access to all websites, browsing history,
+        cookies, identity, downloads, geolocation, camera, or microphone.
+      </p>
+
+      <h2>Sharing, sale, and user control</h2>
+      <p>
+        ProtPeek does not sell, rent, profile, or use data for advertising. The
+        only disclosure initiated by the extension is the provider request
+        required to retrieve a remote structure explicitly requested by the
+        user. Users can avoid remote requests by loading only local files, and
+        can cancel a load, replace a structure, close the panel, disable the
+        extension, or uninstall it at any time.
+      </p>
+
+      <h2>This website</h2>
+      <p>
+        This policy page contains no scripts, analytics, cookies, forms, or
+        remote assets. It is hosted by GitHub Pages; GitHub may process standard
+        web-server request data independently under GitHub's own policies.
+      </p>
+
+      <h2>Changes and contact</h2>
+      <p>
+        This policy will be updated if ProtPeek's permissions, providers,
+        storage, or data practices change. Privacy questions can be opened in
+        <a href="https://github.com/MOMISBACK/ProtPeek/issues">GitHub Issues</a>.
+        The repository contains the
+        <a href="https://github.com/MOMISBACK/ProtPeek/blob/main/PRIVACY.md">versioned policy</a>,
+        complete source, permission configuration, and transparency notes.
+      </p>
+    </main>
+    <footer>
+      ProtPeek source code is available under MPL-2.0. The ProtPeek name and
+      brand assets are reserved by MOMISBACK.
+    </footer>
+  </body>
+</html>

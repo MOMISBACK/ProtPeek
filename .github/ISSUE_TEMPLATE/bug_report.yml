@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Bug report
+description: Report a reproducible ProtPeek defect without sharing sensitive data.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve ProtPeek. Do not attach private structures or credentials.
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Firefox 154 or Chrome 145
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ProtPeek version or commit
+      placeholder: 0.1.0 or commit hash
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Use a public identifier or minimal non-sensitive fixture.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: This report contains no credentials, private structures, or unpublished research data.
+          required: true

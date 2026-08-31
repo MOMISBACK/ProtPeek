@@ -1,0 +1,8 @@
+HEADER    PROTPEEK TEST                         31-AUG-26   FPRT
+ATOM      1  N   ALA A   5       0.000   0.000   0.000  1.00 10.00           N
+ATOM      2  CA  ALA A   5       1.450   0.000   0.000  1.00 10.00           C
+ATOM      3  C   ALA A   5       2.050   1.350   0.000  1.00 10.00           C
+HETATM    4 MG    MG B 101       5.000   0.000   0.000  1.00 20.00          MG
+TER
+END
+

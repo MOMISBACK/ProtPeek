@@ -1,0 +1,51 @@
+{
+  "name": "protpeek",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local-first protein structure viewer for the browser side panel.",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MOMISBACK/ProtPeek.git"
+  },
+  "homepage": "https://github.com/MOMISBACK/ProtPeek#readme",
+  "bugs": {
+    "url": "https://github.com/MOMISBACK/ProtPeek/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:firefox": "wxt -b firefox",
+    "dev:chrome": "wxt -b chrome",
+    "build:firefox": "wxt build -b firefox",
+    "build:chrome": "wxt build -b chrome",
+    "verify:build": "node scripts/verify-build.mjs",
+    "zip:firefox": "wxt zip -b firefox",
+    "zip:chrome": "wxt zip -b chrome",
+    "release:copy": "node scripts/copy-release-artifacts.mjs",
+    "release": "npm run zip:firefox && npm run zip:chrome && npm run verify:build && npm run release:copy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "capture:store": "node scripts/capture-store-assets.mjs",
+    "benchmark": "node --import=tsx scripts/benchmark.ts",
+    "prepare": "wxt prepare"
+  },
+  "dependencies": {
+    "molstar": "5.11.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.4.0",
+    "eslint": "10.9.1",
+    "tsx": "4.20.5",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.68.0",
+    "vite": "8.2.2",
+    "vitest": "4.1.11",
+    "wxt": "0.21.4"
+  }
+}

@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Feature request
+description: Propose a focused improvement for maintainer review.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Scientific or user problem
+      description: Explain the concrete workflow problem before proposing an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Privacy, permissions, network, and performance impact
+      description: State “none” where appropriate and explain any non-local processing.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: I understand that implementation and merge require MOMISBACK approval.
+          required: true
