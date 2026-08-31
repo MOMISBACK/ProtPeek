@@ -80,8 +80,9 @@ WXT writes the unpacked builds to `.output/firefox-mv3` and
 ignored by Git, and may be deleted and rebuilt at any time; it is a working
 directory, not the public release location.
 
-The `npm run release` pipeline creates the browser and source archives under
-`.output/`, verifies the builds, and copies them into the visible
+The `npm run release` pipeline creates the browser archives, makes a complete
+source archive from the clean Git `HEAD` (including the test suite), verifies
+the builds, and copies all three archives into the visible
 [`release/`](./release/) directory for inspection. These generated ZIP files
 are intentionally ignored by Git; official binaries and source archives are
 published on the matching GitHub Release. See
@@ -98,6 +99,7 @@ published on the matching GitHub Release. See
 | `npm run verify:build` | Verify both built manifests, permissions, CSP, icons, and target-specific panel declarations |
 | `npm run zip:firefox` | Produce a Firefox submission archive with WXT |
 | `npm run zip:chrome` | Produce a Chromium submission archive with WXT |
+| `npm run release:sources` | Archive the exact clean Git `HEAD`, including tests, as the release sources |
 | `npm run release:copy` | Copy existing verified archives from `.output/` into visible `release/` |
 | `npm run release` | Build, verify, and copy the browser and source release archives |
 | `npm test` | Run the Vitest suite once |
