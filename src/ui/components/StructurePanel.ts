@@ -34,10 +34,16 @@ export interface StructurePanelCallbacks {
 }
 
 export class StructurePanel {
+  readonly customizationPanel = element('details', {
+    className: 'customization-panel',
+  });
   readonly entityStrip = element('section', { className: 'entity-strip' });
   readonly inspector = element('section', { className: 'inspector' });
   readonly #callbacks: StructurePanelCallbacks;
   readonly #chainList = element('div', { className: 'entity-group chain-list' });
+  readonly #customizationContent = element('div', {
+    className: 'customization-content',
+  });
   readonly #ligandList = element('div', { className: 'entity-group ligand-list' });
   readonly #sequence = new VirtualSequence({
     onResidueClick: (residue) => this.#selectResidue(residue),
@@ -93,8 +99,10 @@ export class StructurePanel {
 
     this.#buildEntityStrip();
     this.#buildInspector();
+    this.#buildCustomizationPanel();
     this.#syncModified();
     this.#syncSelectionActions();
+    setHidden(this.customizationPanel, true);
     setHidden(this.entityStrip, true);
     setHidden(this.inspector, true);
   }
@@ -123,6 +131,7 @@ export class StructurePanel {
     this.#syncModified();
     this.#syncColorSwatches();
     this.#syncSelectionActions();
+    setHidden(this.customizationPanel, false);
     setHidden(this.entityStrip, false);
     setHidden(this.inspector, false);
   }
@@ -152,6 +161,8 @@ export class StructurePanel {
     this.#syncModified();
     this.#syncColorSwatches();
     this.#syncSelectionActions();
+    this.customizationPanel.removeAttribute('open');
+    setHidden(this.customizationPanel, true);
     setHidden(this.entityStrip, true);
     setHidden(this.inspector, true);
   }
@@ -177,6 +188,8 @@ export class StructurePanel {
   }
 
   setBusy(busy: boolean): void {
+    this.customizationPanel.inert = busy;
+    this.customizationPanel.setAttribute('aria-busy', String(busy));
     for (const section of [this.entityStrip, this.inspector]) {
       section.inert = busy;
       section.classList.toggle('is-busy', busy);
@@ -228,6 +241,15 @@ export class StructurePanel {
   #buildEntityStrip(): void {
     this.entityStrip.setAttribute('aria-label', 'Chains and ligands');
     this.entityStrip.append(this.#chainList, this.#ligandList);
+  }
+
+  #buildCustomizationPanel(): void {
+    const summary = element('summary', {
+      className: 'customization-summary',
+      text: 'Customize structure',
+    });
+    this.#customizationContent.append(this.entityStrip, this.inspector);
+    this.customizationPanel.append(summary, this.#customizationContent);
   }
 
   #buildInspector(): void {

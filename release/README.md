@@ -7,8 +7,8 @@ from `.output/` into this visible directory. Generated ZIP files are
 intentionally ignored by Git; official binaries and sources are attached to
 the matching GitHub Release.
 
-Expected files for version `0.1.0`:
+Expected files for version `0.1.1`:
 
-- `ProtPeek-0.1.0-chrome.zip`
-- `ProtPeek-0.1.0-firefox.zip`
-- `ProtPeek-0.1.0-sources.zip`
+- `ProtPeek-0.1.1-chrome.zip`
+- `ProtPeek-0.1.1-firefox.zip`
+- `ProtPeek-0.1.1-sources.zip`

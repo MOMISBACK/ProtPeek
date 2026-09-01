@@ -34,6 +34,10 @@ import { shouldHideEmptyState } from './emptyStateVisibility';
 
 type Loader = (signal: AbortSignal) => Promise<LoadedStructureData>;
 
+export interface ProtPeekAppOptions {
+  readonly onArticleRefresh: () => void;
+}
+
 const ERROR_MESSAGES: Record<string, string> = {
   'file-too-large': 'This structure is too large to open safely',
   'invalid-file': 'This file could not be read',
@@ -67,6 +71,10 @@ export class ProtPeekApp {
     title: 'Download structure (PDBx/mmCIF)',
   });
   readonly #identifierInput = element('input', { className: 'identifier-input' });
+  readonly #articleRefreshButton = button('↻', {
+    className: 'article-refresh-button',
+    title: 'Refresh structures on this page',
+  });
   readonly #fileInput = element('input', { className: 'visually-hidden' });
   readonly #fileButton = button('Choose file', { className: 'text-button empty-file-button' });
   readonly #articleBar = element('section', { className: 'article-bar' });
@@ -87,6 +95,7 @@ export class ProtPeekApp {
   #disposed = false;
   #dragDepth = 0;
   #hasStructure = false;
+  #activeArticleTabId: number | undefined;
   #lastLoad: (() => Promise<void>) | undefined;
   #loadGeneration = 0;
   #viewerActionGeneration = 0;
@@ -96,7 +105,7 @@ export class ProtPeekApp {
     | undefined;
   #windowId: number | undefined;
 
-  constructor(root: HTMLElement) {
+  constructor(root: HTMLElement, options: ProtPeekAppOptions) {
     this.#root = root;
     this.#viewer = new LazyStructureViewer(this.#viewerHost, {
       onContextLost: () => this.#showError('WebGL context was lost. Waiting for recovery…', false),
@@ -122,6 +131,14 @@ export class ProtPeekApp {
         this.#selectionRepresentation(representation),
       onShowAll: () => this.#showAll(),
     });
+    this.#articleRefreshButton.setAttribute(
+      'aria-label',
+      'Refresh structures on this page',
+    );
+    this.#articleRefreshButton.addEventListener(
+      'click',
+      options.onArticleRefresh,
+    );
 
     this.#build();
     this.#bind();
@@ -146,6 +163,13 @@ export class ProtPeekApp {
     } catch (error) {
       logger.warn('Could not initialize session integration', error);
     }
+  }
+
+  /** Clears cross-tab results and rejects any late payload from the old tab. */
+  activateArticleTab(tabId: number): void {
+    this.#activeArticleTabId = tabId;
+    this.#articleItems.replaceChildren();
+    setHidden(this.#articleBar, true);
   }
 
   dispose(): void {
@@ -177,7 +201,11 @@ export class ProtPeekApp {
       void this.#loadIdentifier(this.#identifierInput.value);
     });
 
-    const header = element('header', { className: 'topbar' }, [brand, form]);
+    const header = element('header', { className: 'topbar' }, [
+      brand,
+      form,
+      this.#articleRefreshButton,
+    ]);
     this.#articleBar.setAttribute('aria-label', 'Structures on this page');
     this.#articleBar.append(
       element('span', { className: 'article-label', text: 'On this page' }),
@@ -250,8 +278,7 @@ export class ProtPeekApp {
       header,
       this.#articleBar,
       this.#viewerFrame,
-      this.#panel.entityStrip,
-      this.#panel.inspector,
+      this.#panel.customizationPanel,
     ]);
     this.#root.replaceChildren(shell);
   }
@@ -599,6 +626,12 @@ export class ProtPeekApp {
   }
 
   #renderArticleStructures(payload: ScanPayload): void {
+    if (
+      this.#activeArticleTabId !== undefined &&
+      payload.tabId !== this.#activeArticleTabId
+    ) {
+      return;
+    }
     this.#articleItems.replaceChildren();
     for (const structure of payload.structures) {
       const chip = button(structure.displayId, { className: 'article-chip' });

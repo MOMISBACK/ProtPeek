@@ -4,7 +4,7 @@ import type { ScanPayload } from '../browser/sessionPayloads';
 import { articleStructuresFromScanResult } from './articleScanResult';
 
 export const ACTIVATED_TAB_SCAN_ERROR =
-  'Click the ProtPeek toolbar button to scan this tab';
+  'This browser page cannot be scanned';
 export const ARTICLE_SCAN_ERROR = 'This page cannot be scanned';
 
 export type ArticleScanOutcome =

@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: MPL-2.0
 import {
-  detectPdbIdentifiersInText,
+  detectPdbIdentifierHitsInText,
   detectPdbIdentifiersInTrustedValue,
   detectPdbIdentifiersInUrl,
 } from './pdbDetection';
+import {
+  detectProteinIdentifierHitsInText,
+  detectProteinIdentifiersInUrl,
+  detectUniProtIdentifiersInTrustedValue,
+} from './proteinIdentifierDetection';
 import type { PdbIdentifierFormat } from '../structures/identifiers/pdb';
-import type { PdbIdentifier } from '../structures/identifiers/pdb';
+import type { StructureIdentifier } from '../structures/identifiers';
 
 export interface ArticleLinkSnapshot {
   readonly href: string;
@@ -38,19 +43,29 @@ export type ArticleStructureSource =
   | 'metadata'
   | 'structured-data';
 
-export interface ArticleStructureDetection {
+interface ArticleStructureDetectionBase {
   readonly id: string;
   readonly displayId: string;
-  readonly format: PdbIdentifierFormat;
   readonly sources: readonly ArticleStructureSource[];
 }
 
+export type ArticleStructureDetection =
+  | (ArticleStructureDetectionBase & {
+      readonly format: PdbIdentifierFormat;
+      readonly type: 'pdb';
+    })
+  | (ArticleStructureDetectionBase & {
+      readonly format?: never;
+      readonly type: 'alphafold' | 'uniprot';
+    });
+
 interface MutableDetection {
-  identifier: PdbIdentifier;
+  identifier: StructureIdentifier;
   sources: ArticleStructureSource[];
 }
 
-const RELEVANT_FIELD_PATTERN = /(?:^|[^a-z0-9])(?:pdb(?:\s*(?:ids?|accessions?|entries?))?|rcsb|pdbe|wwpdb|protein\s*data\s*bank|structures?)(?:[^a-z0-9]|$)/i;
+const PDB_FIELD_PATTERN = /(?:^|[^a-z0-9])(?:pdb(?:\s*(?:ids?|accessions?|entries?))?|rcsb|pdbe|wwpdb|protein\s*data\s*bank|structures?)(?:[^a-z0-9]|$)/i;
+const UNIPROT_FIELD_PATTERN = /(?:^|[^a-z0-9])(?:uniprot(?:\s*(?:ids?|accessions?|entries?|kb))?|swiss[-\s]*prot)(?:[^a-z0-9]|$)/i;
 const MAX_STRUCTURED_DEPTH = 12;
 const MAX_STRUCTURED_VALUES = 5_000;
 
@@ -65,12 +80,43 @@ function metadataDescriptor(metadata: ArticleMetadataSnapshot): string {
     .join(' ');
 }
 
-function isRelevantField(name: string): boolean {
-  return RELEVANT_FIELD_PATTERN.test(
-    name
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      .replaceAll('_', ' '),
-  );
+function normalizedFieldName(name: string): string {
+  return name
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replaceAll('_', ' ');
+}
+
+function isPdbField(name: string): boolean {
+  return PDB_FIELD_PATTERN.test(normalizedFieldName(name));
+}
+
+function isUniProtField(name: string): boolean {
+  return UNIPROT_FIELD_PATTERN.test(normalizedFieldName(name));
+}
+
+function identifierKey(identifier: StructureIdentifier): string {
+  return identifier.type === 'pdb'
+    ? `pdb:${identifier.identityKey}`
+    : `${identifier.type}:${identifier.canonicalValue}`;
+}
+
+function detectIdentifiersInText(text: string): StructureIdentifier[] {
+  return [
+    ...detectPdbIdentifierHitsInText(text),
+    ...detectProteinIdentifierHitsInText(text),
+  ]
+    .sort((left, right) => left.index - right.index)
+    .map(({ identifier }) => identifier);
+}
+
+function detectIdentifiersInUrl(
+  href: string,
+  baseUrl?: string,
+): StructureIdentifier[] {
+  return [
+    ...detectPdbIdentifiersInUrl(href, baseUrl),
+    ...detectProteinIdentifiersInUrl(href, baseUrl),
+  ];
 }
 
 /**
@@ -82,13 +128,14 @@ export class ArticleStructureScanner {
     const detections = new Map<string, MutableDetection>();
 
     const add = (
-      identifiers: readonly PdbIdentifier[],
+      identifiers: readonly StructureIdentifier[],
       source: ArticleStructureSource,
     ): void => {
       for (const identifier of identifiers) {
-        const existing = detections.get(identifier.identityKey);
+        const key = identifierKey(identifier);
+        const existing = detections.get(key);
         if (existing === undefined) {
-          detections.set(identifier.identityKey, {
+          detections.set(key, {
             identifier,
             sources: [source],
           });
@@ -99,42 +146,46 @@ export class ArticleStructureScanner {
     };
 
     if (snapshot.text !== undefined) {
-      add(detectPdbIdentifiersInText(snapshot.text), 'text');
+      add(detectIdentifiersInText(snapshot.text), 'text');
     }
 
     if (snapshot.url !== undefined) {
-      add(detectPdbIdentifiersInUrl(snapshot.url), 'page-url');
+      add(detectIdentifiersInUrl(snapshot.url), 'page-url');
     }
 
     for (const link of snapshot.links ?? []) {
-      const linkedIdentifiers = detectPdbIdentifiersInUrl(
-        link.href,
-        snapshot.url,
-      );
+      const linkedIdentifiers = detectIdentifiersInUrl(link.href, snapshot.url);
       add(linkedIdentifiers, 'link');
 
       for (const label of [link.text, link.title, link.ariaLabel]) {
         if (label === undefined) continue;
-        add(detectPdbIdentifiersInText(label), 'link');
+        add(detectIdentifiersInText(label), 'link');
 
         // A bare anchor label is trusted only when its destination is an
         // official structure URL.
-        if (linkedIdentifiers.length > 0) {
+        if (linkedIdentifiers.some(({ type }) => type === 'pdb')) {
           add(detectPdbIdentifiersInTrustedValue(label), 'link');
+        }
+        if (linkedIdentifiers.some(({ type }) => type === 'uniprot')) {
+          add(detectUniProtIdentifiersInTrustedValue(label), 'link');
         }
       }
     }
 
     for (const metadata of snapshot.metadata ?? []) {
-      add(detectPdbIdentifiersInText(metadata.content), 'metadata');
-      add(
-        detectPdbIdentifiersInUrl(metadata.content, snapshot.url),
-        'metadata',
-      );
+      add(detectIdentifiersInText(metadata.content), 'metadata');
+      add(detectIdentifiersInUrl(metadata.content, snapshot.url), 'metadata');
 
-      if (isRelevantField(metadataDescriptor(metadata))) {
+      const descriptor = metadataDescriptor(metadata);
+      if (isPdbField(descriptor)) {
         add(
           detectPdbIdentifiersInTrustedValue(metadata.content),
+          'metadata',
+        );
+      }
+      if (isUniProtField(descriptor)) {
+        add(
+          detectUniProtIdentifiersInTrustedValue(metadata.content),
           'metadata',
         );
       }
@@ -142,18 +193,25 @@ export class ArticleStructureScanner {
 
     this.#scanStructuredData(snapshot.structuredData ?? [], add, snapshot.url);
 
-    return [...detections.values()].map(({ identifier, sources }) => ({
-      id: identifier.canonicalValue,
-      displayId: identifier.displayValue,
-      format: identifier.format,
-      sources,
-    }));
+    return [...detections.values()].map(
+      ({ identifier, sources }): ArticleStructureDetection => {
+        const common = {
+          id: identifier.canonicalValue,
+          displayId: identifier.displayValue,
+          sources,
+        };
+
+        return identifier.type === 'pdb'
+          ? { ...common, format: identifier.format, type: 'pdb' }
+          : { ...common, type: identifier.type };
+      },
+    );
   }
 
   #scanStructuredData(
     values: readonly unknown[],
     add: (
-      identifiers: readonly PdbIdentifier[],
+      identifiers: readonly StructureIdentifier[],
       source: ArticleStructureSource,
     ) => void,
     baseUrl?: string,
@@ -161,20 +219,27 @@ export class ArticleStructureScanner {
     const queue: Array<{
       value: unknown;
       depth: number;
-      trusted: boolean;
+      trustedPdb: boolean;
+      trustedUniProt: boolean;
     }> = values
       .slice(0, MAX_STRUCTURED_VALUES)
-      .map((value) => ({ value, depth: 0, trusted: false }));
+      .map((value) => ({
+        value,
+        depth: 0,
+        trustedPdb: false,
+        trustedUniProt: false,
+      }));
     const visited = new WeakSet<object>();
     let cursor = 0;
 
     const enqueue = (
       value: unknown,
       depth: number,
-      trusted: boolean,
+      trustedPdb: boolean,
+      trustedUniProt: boolean,
     ): void => {
       if (queue.length < MAX_STRUCTURED_VALUES) {
-        queue.push({ value, depth, trusted });
+        queue.push({ value, depth, trustedPdb, trustedUniProt });
       }
     };
 
@@ -196,7 +261,8 @@ export class ArticleStructureScanner {
             enqueue(
               JSON.parse(current.value) as unknown,
               current.depth + 1,
-              current.trusted,
+              current.trustedPdb,
+              current.trustedUniProt,
             );
             continue;
           } catch {
@@ -204,14 +270,20 @@ export class ArticleStructureScanner {
           }
         }
 
-        add(detectPdbIdentifiersInText(current.value), 'structured-data');
+        add(detectIdentifiersInText(current.value), 'structured-data');
         add(
-          detectPdbIdentifiersInUrl(current.value, baseUrl),
+          detectIdentifiersInUrl(current.value, baseUrl),
           'structured-data',
         );
-        if (current.trusted) {
+        if (current.trustedPdb) {
           add(
             detectPdbIdentifiersInTrustedValue(current.value),
+            'structured-data',
+          );
+        }
+        if (current.trustedUniProt) {
+          add(
+            detectUniProtIdentifiersInTrustedValue(current.value),
             'structured-data',
           );
         }
@@ -225,7 +297,12 @@ export class ArticleStructureScanner {
 
       if (Array.isArray(current.value)) {
         for (const value of current.value) {
-          enqueue(value, current.depth + 1, current.trusted);
+          enqueue(
+            value,
+            current.depth + 1,
+            current.trustedPdb,
+            current.trustedUniProt,
+          );
         }
         continue;
       }
@@ -234,7 +311,8 @@ export class ArticleStructureScanner {
         enqueue(
           value,
           current.depth + 1,
-          current.trusted || isRelevantField(name),
+          current.trustedPdb || isPdbField(name),
+          current.trustedUniProt || isUniProtField(name),
         );
       }
     }

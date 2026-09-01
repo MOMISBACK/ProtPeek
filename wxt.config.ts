@@ -7,6 +7,11 @@ const STRUCTURE_HOSTS = [
   'https://alphafold.ebi.ac.uk/*',
 ];
 
+// Automatic rescans while the panel is open need persistent access to the
+// active article after a tab switch or cross-origin navigation. The scanner
+// still runs only on demand from the live panel and keeps page data local.
+const ARTICLE_HOSTS = ['http://*/*', 'https://*/*'];
+
 const ICONS = {
   16: 'icon-16.png',
   32: 'icon-32.png',
@@ -38,10 +43,11 @@ export default defineConfig({
     action: {
       default_icon: ICONS,
       default_title: 'Open ProtPeek',
+      ...(browser === 'firefox' ? { default_area: 'navbar' } : {}),
     },
     icons: ICONS,
     permissions: ['activeTab', 'scripting', 'contextMenus', 'storage'],
-    host_permissions: STRUCTURE_HOSTS,
+    host_permissions: [...ARTICLE_HOSTS, ...STRUCTURE_HOSTS],
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'self';",
     },

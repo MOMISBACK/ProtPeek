@@ -6,6 +6,9 @@ import {
   detectPdbIdentifiersInText,
   detectPdbIdentifiersInTrustedValue,
   detectPdbIdentifiersInUrl,
+  detectProteinIdentifiersInText,
+  detectProteinIdentifiersInUrl,
+  detectUniProtIdentifiersInTrustedValue,
   type ArticlePageSnapshot,
 } from '../../src/article';
 
@@ -125,6 +128,112 @@ describe('trusted PDB links', () => {
         displayId: '8XYZ',
         format: 'legacy',
         sources: ['link'],
+        type: 'pdb',
+      },
+    ]);
+  });
+});
+
+describe('contextual UniProt and explicit AlphaFold text detection', () => {
+  it.each([
+    ['UniProt P69905', ['P69905']],
+    ['UniProt accession: q9Y261', ['Q9Y261']],
+    ['UniProt accession number A2BC19', ['A2BC19']],
+    ['UniProtKB ID = A0A023GPI8', ['A0A023GPI8']],
+    ['Swiss-Prot entries P69905 and Q9Y261', ['P69905', 'Q9Y261']],
+    ['UniProtKB/Swiss-Prot accession P69905', ['P69905']],
+  ])('finds contextual accessions in %s', (text, expected) => {
+    expect(
+      detectProteinIdentifiersInText(text).map(
+        ({ canonicalValue }) => canonicalValue,
+      ),
+    ).toEqual(expected);
+  });
+
+  it('recognizes full AlphaFold IDs without requiring a label', () => {
+    expect(
+      ids({
+        text: 'Models AF-P69905-F1 and af-a0a023gpi8-f12 were compared.',
+      }),
+    ).toEqual(['AF-P69905-F1', 'AF-A0A023GPI8-F12']);
+  });
+
+  it.each([
+    'P69905 was measured in the cohort.',
+    'The sample A2BC19 was retained.',
+    'UniProt database release notes precede an unrelated sample P69905.',
+    'notAF-P69905-F1',
+    'prefix_AF-P69905-F1',
+    'AF-P69905-F0',
+    'AF-P69905-F1extra',
+  ])('ignores unlabelled or malformed accession-like text: %s', (text) => {
+    expect(ids({ text })).toEqual([]);
+  });
+
+  it('preserves article order across identifier databases', () => {
+    expect(
+      ids({
+        text: 'UniProt P69905 precedes PDB 1ABC and AF-Q9Y261-F1.',
+      }),
+    ).toEqual(['P69905', '1abc', 'AF-Q9Y261-F1']);
+  });
+});
+
+describe('trusted UniProt and AlphaFold links', () => {
+  it.each([
+    ['https://www.uniprot.org/uniprotkb/P69905/entry', ['P69905']],
+    ['https://rest.uniprot.org/uniprotkb/Q9Y261.fasta', ['Q9Y261']],
+    ['https://alphafold.ebi.ac.uk/entry/P69905', ['P69905']],
+    ['https://alphafold.ebi.ac.uk/api/prediction/Q9Y261', ['Q9Y261']],
+    [
+      'https://alphafold.ebi.ac.uk/files/AF-P69905-F1-model_v4.cif',
+      ['AF-P69905-F1'],
+    ],
+  ])('extracts official URL %s', (url, expected) => {
+    expect(
+      detectProteinIdentifiersInUrl(url).map(
+        ({ canonicalValue }) => canonicalValue,
+      ),
+    ).toEqual(expected);
+  });
+
+  it.each([
+    'https://example.test/uniprotkb/P69905',
+    'https://uniprot.org.evil.test/uniprotkb/P69905',
+    'https://www.ebi.ac.uk/uniprotkb/P69905',
+    'http://www.uniprot.org/uniprotkb/P69905',
+    'https://alphafold.ebi.ac.uk/search/P69905',
+  ])('ignores untrusted or irrelevant URL %s', (url) => {
+    expect(detectProteinIdentifiersInUrl(url)).toEqual([]);
+  });
+
+  it('surfaces official link destinations as clickable detection types', () => {
+    expect(
+      new ArticleStructureScanner().scan({
+        links: [
+          {
+            href: 'https://www.uniprot.org/uniprotkb/P69905/entry',
+            text: 'P69905',
+          },
+          {
+            href:
+              'https://alphafold.ebi.ac.uk/files/AF-Q9Y261-F1-model_v4.cif',
+          },
+          { href: 'https://example.test/P12345', text: 'P12345' },
+        ],
+      }),
+    ).toEqual([
+      {
+        displayId: 'P69905',
+        id: 'P69905',
+        sources: ['link'],
+        type: 'uniprot',
+      },
+      {
+        displayId: 'AF-Q9Y261-F1',
+        id: 'AF-Q9Y261-F1',
+        sources: ['link'],
+        type: 'alphafold',
       },
     ]);
   });
@@ -211,12 +320,61 @@ describe('metadata and structured data scanning', () => {
           'metadata',
           'structured-data',
         ],
+        type: 'pdb',
       },
     ]);
   });
 
   it('returns no detections for an empty snapshot', () => {
     expect(new ArticleStructureScanner().scan({})).toEqual([]);
+  });
+});
+
+describe('trusted UniProt fields', () => {
+  it('accepts bare accessions only in explicitly UniProt metadata', () => {
+    expect(
+      ids({
+        metadata: [
+          { name: 'citation_uniprot_accession', content: 'P69905; Q9Y261' },
+          { property: 'protein_accession', content: 'A2BC19' },
+        ],
+      }),
+    ).toEqual(['P69905', 'Q9Y261']);
+  });
+
+  it('uses UniProt JSON-LD keys while full AlphaFold IDs need no trusted key', () => {
+    expect(
+      ids({
+        structuredData: [
+          {
+            proteinAccession: 'A2BC19',
+            uniprotAccession: ['P69905', 'Q9Y261'],
+            model: 'AF-A0A023GPI8-F1',
+          },
+        ],
+      }),
+    ).toEqual(['AF-A0A023GPI8-F1', 'P69905', 'Q9Y261']);
+  });
+
+  it.each([
+    ['P69905', ['P69905']],
+    ['P69905 / Q9Y261', ['P69905', 'Q9Y261']],
+    ['A0A023GPI8; A2BC19', ['A0A023GPI8', 'A2BC19']],
+  ])('parses the complete trusted value %s', (value, expected) => {
+    expect(
+      detectUniProtIdentifiersInTrustedValue(value).map(
+        ({ canonicalValue }) => canonicalValue,
+      ),
+    ).toEqual(expected);
+  });
+
+  it.each([
+    'Study P69905',
+    'P69905 trailing words',
+    'P69905, nope',
+    'P69905 Q9Y261',
+  ])('rejects non-list trusted content: %s', (value) => {
+    expect(detectUniProtIdentifiersInTrustedValue(value)).toEqual([]);
   });
 });
 

@@ -14,6 +14,7 @@ describe('scanArticleTab', () => {
       format: 'legacy',
       id: '1crn',
       sources: ['text'],
+      type: 'pdb',
     };
     const scanTab = vi.fn().mockResolvedValue([valid, { id: 123 }]);
 
@@ -40,7 +41,7 @@ describe('scanArticleTab', () => {
     });
   });
 
-  it('explains the activeTab gesture required after switching tabs', async () => {
+  it('explains that a restricted browser page cannot be scanned', async () => {
     await expect(
       scanArticleTab(
         8,
@@ -49,7 +50,7 @@ describe('scanArticleTab', () => {
       ),
     ).resolves.toMatchObject({
       payload: {
-        error: 'Click the ProtPeek toolbar button to scan this tab',
+        error: 'This browser page cannot be scanned',
         structures: [],
         tabId: 8,
       },

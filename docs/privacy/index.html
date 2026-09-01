@@ -26,7 +26,7 @@
     </header>
     <main>
       <h1>Privacy Policy</h1>
-      <p class="meta">Last updated: 1 September 2026 · Applies to ProtPeek 0.1.0</p>
+      <p class="meta">Last updated: 1 September 2026 · Applies to ProtPeek 0.1.1</p>
 
       <div class="callout">
         ProtPeek has no user accounts, analytics, advertising, tracking,
@@ -45,17 +45,21 @@
 
       <h2>Article access</h2>
       <p>
-        After the user clicks the ProtPeek toolbar action, the browser grants
-        temporary access to the active tab. ProtPeek locally inspects a bounded
-        snapshot of the main document's visible text, links, metadata, page
-        URL, and JSON-LD to detect contextual PDB references. Only compact
-        detection results return to the extension background; the page
-        snapshot is not sent to ProtPeek, RCSB, AlphaFold, or another server.
+        ProtPeek locally inspects a bounded snapshot of the active HTTP(S)
+        document's visible text, links, metadata, page URL, and JSON-LD to
+        detect contextual structure references. Only compact detection results
+        return to the extension background; the page snapshot is not sent to
+        ProtPeek, RCSB, AlphaFold, or another server.
       </p>
       <p>
-        While the panel is open, a tab already authorised by the browser may be
-        rescanned when activated or after it finishes loading. A newly visited
-        tab requires another explicit toolbar click.
+        Automatic refresh across newly opened or navigated tabs requires access
+        to HTTP and HTTPS pages. While the panel is open, ProtPeek rescans the
+        active tab after tab changes, completed navigation, in-page route
+        changes, or debounced article-content changes. A small panel control can
+        request an immediate manual refresh. A page monitor sends only a changed
+        signal, not DOM content, and closing the panel removes the listener that
+        turns those signals into rescans. Browser-internal and other restricted
+        pages cannot be scanned.
       </p>
 
       <h2>Remote structure requests</h2>
@@ -121,16 +125,20 @@
 
       <h2>Permissions</h2>
       <ul>
-        <li><strong>activeTab:</strong> temporary page access after a user gesture.</li>
-        <li><strong>scripting:</strong> one-shot injection of the bounded article scanner.</li>
+        <li><strong>activeTab:</strong> click-triggered page-access fallback.</li>
+        <li><strong>scripting:</strong> injection of the bounded scanner and local page-change monitor.</li>
         <li><strong>contextMenus:</strong> explicit “View in ProtPeek” selection workflow.</li>
         <li><strong>storage:</strong> session-scoped background/panel coordination.</li>
         <li><strong>sidePanel:</strong> Chromium's native side-panel surface.</li>
+        <li><strong>HTTP(S) page access:</strong> automatic active-tab rescans while the panel is open.</li>
         <li><strong>Exact provider hosts:</strong> download user-requested structure data.</li>
       </ul>
       <p>
-        ProtPeek does not request access to all websites, browsing history,
-        cookies, identity, downloads, geolocation, camera, or microphone.
+        The manifest declares <code>http://*/*</code> and
+        <code>https://*/*</code> explicitly; this is broad page access required
+        for automatic new-tab refresh. ProtPeek does not request browsing
+        history, cookies, identity, downloads, geolocation, camera, or
+        microphone.
       </p>
 
       <h2>Sharing, sale, and user control</h2>

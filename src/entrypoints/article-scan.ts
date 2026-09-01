@@ -1,8 +1,23 @@
 // SPDX-License-Identifier: MPL-2.0
+import { browser } from 'wxt/browser';
+
 import { ArticleStructureScanner, type ArticlePageSnapshot } from '../article';
+import {
+  ArticleChangeRefreshDebouncer,
+  articlePageChangedMessage,
+} from '../browser/sidePanelSession';
 
 const MAX_TEXT_LENGTH = 2_000_000;
 const MAX_ELEMENTS = 5_000;
+
+interface ArticleScanMonitorState {
+  readonly debouncer: ArticleChangeRefreshDebouncer;
+  readonly observer: MutationObserver;
+}
+
+interface ArticleScanGlobal {
+  __PROTPEEK_ARTICLE_SCAN_MONITOR__?: ArticleScanMonitorState;
+}
 
 function text(value: string | null | undefined, maximum = 1_000): string {
   return (value ?? '').slice(0, maximum);
@@ -45,9 +60,60 @@ function captureArticleSnapshot(): ArticlePageSnapshot {
   };
 }
 
+/**
+ * Keep the one-shot scan cheap while still noticing article content rendered
+ * after load. Re-injections reuse the same observer, and only a live panel
+ * reacts to the resulting extension message.
+ */
+function installArticleChangeMonitor(): void {
+  const pageGlobal = globalThis as typeof globalThis & ArticleScanGlobal;
+  if (pageGlobal.__PROTPEEK_ARTICLE_SCAN_MONITOR__ !== undefined) return;
+
+  const root = document.documentElement;
+  if (root === null || typeof MutationObserver === 'undefined') return;
+
+  const debouncer = new ArticleChangeRefreshDebouncer(() => {
+    void browser.runtime.sendMessage(articlePageChangedMessage()).catch(() => {
+      // The panel may have been closed since this page was scanned.
+    });
+  });
+  const observer = new MutationObserver(() => debouncer.schedule());
+  const state = { debouncer, observer };
+  pageGlobal.__PROTPEEK_ARTICLE_SCAN_MONITOR__ = state;
+
+  observer.observe(root, {
+    attributeFilter: [
+      'aria-label',
+      'content',
+      'href',
+      'http-equiv',
+      'itemprop',
+      'name',
+      'property',
+      'title',
+      'type',
+    ],
+    attributes: true,
+    characterData: true,
+    childList: true,
+    subtree: true,
+  });
+
+  window.addEventListener(
+    'pagehide',
+    () => {
+      debouncer.cancel();
+      observer.disconnect();
+      delete pageGlobal.__PROTPEEK_ARTICLE_SCAN_MONITOR__;
+    },
+    { once: true },
+  );
+}
+
 export default defineUnlistedScript({
   globalName: true,
   main() {
+    installArticleChangeMonitor();
     return new ArticleStructureScanner().scan(captureArticleSnapshot());
   },
 });

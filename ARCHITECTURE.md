@@ -1,18 +1,18 @@
 # ProtPeek architecture
 
-This document describes the implementation in ProtPeek `0.1.0`. The design keeps browser integration, structure acquisition, molecular rendering, and the user interface behind small explicit boundaries.
+This document describes the implementation in ProtPeek `0.1.1`. The design keeps browser integration, structure acquisition, molecular rendering, and the user interface behind small explicit boundaries.
 
 ## System flow
 
 ```text
 Article page
-  │ toolbar click (`activeTab`)
+  │ toolbar click or live-panel refresh
   ▼
 `article-scan.ts`
   │ bounded, serializable page snapshot
   ▼
 `ArticleStructureScanner`
-  │ validated and deduplicated PDB detections only
+  │ validated and deduplicated structure detections
   ▼
 background → `storage.session` (keyed by window)
   ▼
@@ -37,7 +37,7 @@ For direct context-menu loads, an exact selected identifier is parsed locally an
 | --- | --- |
 | `src/entrypoints/` | WXT background, injected article scan, and shared side-panel entrypoint |
 | `src/browser/` | Cross-browser panel opening and session payload keys |
-| `src/article/` | Pure contextual PDB detection over serializable snapshots |
+| `src/article/` | Pure contextual PDB, UniProt, and AlphaFold detection over serializable snapshots |
 | `src/extension/` | Validation of data crossing injection boundaries and context-menu parsing |
 | `src/structures/identifiers/` | PDB, UniProt, and AlphaFold syntax and normalization |
 | `src/structures/loaders/` | Local reads, official remote downloads, aborts, fallback, and load errors |
@@ -71,7 +71,10 @@ The configured minimums are Chrome 116 and Firefox 140. Firefox receives a backg
 
 ## Article scan boundary
 
-The toolbar action opens the panel and injects the unlisted `article-scan.js` script into the active tab. There is no persistent content script and no `<all_urls>` permission.
+The toolbar action opens the panel and injects the unlisted `article-scan.js`
+script into the active tab. Explicit HTTP(S) host access lets the live panel
+repeat that bounded scan when the active tab or page changes. There is no
+manifest-registered persistent content script and no `<all_urls>` declaration.
 
 The injected entrypoint captures one bounded snapshot:
 
@@ -80,11 +83,25 @@ The injected entrypoint captures one bounded snapshot:
 - up to 100 JSON-LD scripts;
 - the current page URL.
 
-`ArticleStructureScanner` itself has no DOM or WebExtension dependency. Legacy four-character IDs require explicit PDB context or a trusted official URL; extended `pdb_XXXXXXXX` IDs can be recognized directly. Results are deduplicated, including equivalent `1ABC` and `pdb_00001abc` spellings.
+`ArticleStructureScanner` itself has no DOM or WebExtension dependency. Legacy
+four-character IDs require explicit PDB context or a trusted official URL;
+extended `pdb_XXXXXXXX` and complete AlphaFold IDs can be recognized directly.
+Bare UniProt accessions require an adjacent UniProt/Swiss-Prot label, a trusted
+metadata or JSON-LD field, or a recognizable official UniProt/AlphaFold URL.
+Results are deduplicated, including equivalent `1ABC` and `pdb_00001abc`
+spellings.
 
 Only the compact detection array crosses back to the background. `articleStructuresFromScanResult` treats the injected result as untrusted serialized data and validates its complete shape before it reaches the UI.
 
-Scan generations are tracked per browser window. A result from an older tab or scan cannot overwrite a newer one. Activating another tab clears the displayed article candidates until the user explicitly invokes ProtPeek again.
+The injected script also installs one idempotent, debounced mutation monitor.
+It sends only a page-changed signal; the live panel then requests a new bounded
+snapshot. This detects article content rendered after initial load without
+transferring mutations or page contents through messaging.
+
+Scan generations are tracked per browser window. A result from an older tab or
+scan cannot overwrite a newer one. While the panel is open, active-tab changes,
+completed navigations, in-page URL changes, and debounced document mutations
+request a fresh scan; a manual header control can request one immediately.
 
 ## Identifiers and loading
 
@@ -125,8 +142,10 @@ The current pipeline:
 The viewer supports camera reset, chain visibility, residue and ligand
 selection, focus, isolation, overpaint colouring, cartoon/surface polymer
 rendering, and highlight/sticks/ball-and-stick selection rendering. The panel
-exposes focus, isolate, chain visibility, and selection colours as reversible
-controls with `aria-pressed` and visible active states. A second Focus resets
+groups its chain, ligand, sequence, residue, and display controls in one native
+disclosure that starts collapsed for each structure and remains keyboard
+accessible. It exposes focus, isolate, chain visibility, and selection colours
+as reversible controls with `aria-pressed` and visible active states. A second Focus resets
 the camera; a second Isolate or **Show all** restores the full structure and
 camera. Asynchronous actions report success so the panel can roll back an
 optimistic control state after a viewer failure. Mol* interaction events
@@ -177,7 +196,7 @@ Vitest runs in Node and covers identifiers, contextual scanning, serialization v
 After both WXT builds, `npm run verify:build` reads the generated Chrome and Firefox manifests and fails on drift in:
 
 - Manifest V3 and background declarations;
-- exact permissions and official structure-host access;
+- exact permissions, HTTP(S) article access, and official structure hosts;
 - strict extension-page CSP;
 - icons and toolbar action;
 - Chromium `side_panel` versus Firefox `sidebar_action`;
@@ -204,7 +223,7 @@ is used to create them.
 
 ## Known architectural limits
 
-- Article detection is currently PDB-specific and heuristic; existence is checked only during loading.
+- Article detection is contextual and heuristic; candidate existence is checked only during loading.
 - Injection targets the main document, not inaccessible or cross-origin frames.
 - One structure and the model/asymmetric unit are shown at a time; assembly selection is not implemented.
 - Local gzip archives are not decoded.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import { PdbIdentifier } from '../structures/identifiers/pdb';
 
-interface IndexedIdentifier {
+export interface IndexedPdbIdentifier {
   readonly identifier: PdbIdentifier;
   readonly index: number;
 }
@@ -27,8 +27,8 @@ function uniqueIdentifiers(
   return [...byIdentity.values()];
 }
 
-function contextualHits(text: string): IndexedIdentifier[] {
-  const hits: IndexedIdentifier[] = [];
+function contextualHits(text: string): IndexedPdbIdentifier[] {
+  const hits: IndexedPdbIdentifier[] = [];
 
   for (const labelMatch of text.matchAll(CONTEXT_LABEL_PATTERN)) {
     const labelIndex = labelMatch.index;
@@ -75,8 +75,8 @@ function contextualHits(text: string): IndexedIdentifier[] {
   return hits;
 }
 
-function extendedHits(text: string): IndexedIdentifier[] {
-  const hits: IndexedIdentifier[] = [];
+function extendedHits(text: string): IndexedPdbIdentifier[] {
+  const hits: IndexedPdbIdentifier[] = [];
 
   for (const match of text.matchAll(EXTENDED_IDENTIFIER_PATTERN)) {
     const boundary = match[1];
@@ -100,11 +100,25 @@ function extendedHits(text: string): IndexedIdentifier[] {
  * context label. It intentionally never applies the four-character pattern to
  * arbitrary article text.
  */
-export function detectPdbIdentifiersInText(text: string): PdbIdentifier[] {
+export function detectPdbIdentifierHitsInText(
+  text: string,
+): IndexedPdbIdentifier[] {
   const ordered = [...contextualHits(text), ...extendedHits(text)].sort(
     (left, right) => left.index - right.index,
   );
-  return uniqueIdentifiers(ordered.map(({ identifier }) => identifier));
+  const byIdentity = new Map<string, IndexedPdbIdentifier>();
+
+  for (const hit of ordered) {
+    if (!byIdentity.has(hit.identifier.identityKey)) {
+      byIdentity.set(hit.identifier.identityKey, hit);
+    }
+  }
+
+  return [...byIdentity.values()];
+}
+
+export function detectPdbIdentifiersInText(text: string): PdbIdentifier[] {
+  return detectPdbIdentifierHitsInText(text).map(({ identifier }) => identifier);
 }
 
 /** Parses a complete ID or delimited ID list supplied by a trusted field. */

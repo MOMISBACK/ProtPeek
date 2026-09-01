@@ -12,4 +12,9 @@ export {
   detectPdbIdentifiersInTrustedValue,
   detectPdbIdentifiersInUrl,
 } from './pdbDetection';
-
+export {
+  detectProteinIdentifiersInText,
+  detectProteinIdentifiersInUrl,
+  detectUniProtIdentifiersInTrustedValue,
+  type ArticleProteinIdentifier,
+} from './proteinIdentifierDetection';

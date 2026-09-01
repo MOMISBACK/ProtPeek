@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 import type { ArticleStructureDetection } from '../article';
+import { parseStructureIdentifier } from '../structures/identifiers';
 
 function isArticleStructureDetection(
   value: unknown,
@@ -10,11 +11,10 @@ function isArticleStructureDetection(
   const sources = candidate.sources;
   if (!Array.isArray(sources)) return false;
 
-  return (
-    typeof candidate.id === 'string' &&
-    typeof candidate.displayId === 'string' &&
-    (candidate.format === 'legacy' || candidate.format === 'extended') &&
-    sources.every(
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.displayId !== 'string' ||
+    !sources.every(
       (source: unknown) =>
         source === 'text' ||
         source === 'page-url' ||
@@ -22,7 +22,23 @@ function isArticleStructureDetection(
         source === 'metadata' ||
         source === 'structured-data',
     )
-  );
+  ) {
+    return false;
+  }
+
+  const identifier = parseStructureIdentifier(candidate.id);
+  if (
+    identifier === null ||
+    candidate.type !== identifier.type ||
+    candidate.id !== identifier.canonicalValue ||
+    candidate.displayId !== identifier.displayValue
+  ) {
+    return false;
+  }
+
+  return identifier.type === 'pdb'
+    ? candidate.format === identifier.format
+    : candidate.format === undefined;
 }
 
 /** Validates data crossing the scripting serialization boundary. */
