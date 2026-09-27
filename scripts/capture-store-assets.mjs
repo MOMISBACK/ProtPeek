@@ -301,6 +301,11 @@ async function inspectStoreLayout(call) {
   const layout = await execute(
     call,
     `
+      const customization = document.querySelector('.customization-panel');
+      const initiallyOpen = customization instanceof HTMLDetailsElement
+        ? customization.open
+        : null;
+      if (customization instanceof HTMLDetailsElement) customization.open = true;
       const strip = document.querySelector('.entity-strip');
       if (strip instanceof HTMLElement) strip.scrollLeft = 0;
       const chip = document.querySelector('.chain-chip');
@@ -331,22 +336,26 @@ async function inspectStoreLayout(call) {
             chipRect.left + chipRect.width / 2,
             chipRect.top + chipRect.height / 2,
           );
-      return {
+      const result = {
         app: describe(document.querySelector('.protpeek-app')),
         chip: describe(chip),
         covering: covering instanceof HTMLElement
           ? { className: covering.className, tagName: covering.tagName }
           : null,
         inspector: describe(document.querySelector('.inspector')),
+        initiallyOpen,
         scrollLeft: strip instanceof HTMLElement ? strip.scrollLeft : null,
         strip: describe(strip),
         viewer: describe(document.querySelector('.viewer-frame')),
         visibility: describe(visibility),
       };
+      if (customization instanceof HTMLDetailsElement) customization.open = false;
+      return result;
     `,
   );
   log(`store layout ${JSON.stringify(layout)}`);
   if (
+    layout.initiallyOpen !== false ||
     layout.scrollLeft !== 0 ||
     layout.covering?.tagName !== 'BUTTON' ||
     !String(layout.covering.className).split(/\s+/u).includes('chain-chip') ||
@@ -359,6 +368,63 @@ async function inspectStoreLayout(call) {
     );
   }
   return layout;
+}
+
+async function setDetectedStructures(call, identifiers) {
+  await executeAsync(
+    call,
+    `
+      const [identifiers, done] = arguments;
+      browser.windows.getCurrent()
+        .then((window) => browser.storage.session.set({
+          ['protpeek.scan.' + window.id]: {
+            tabId: 1,
+            structures: identifiers.map((identifier) => ({
+              displayId: identifier,
+              format: 'pdb',
+              id: identifier.toLowerCase(),
+              sources: [],
+            })),
+          },
+        }))
+        .then(() => done(true), (error) => done({ error: String(error) }));
+    `,
+    [identifiers],
+  );
+  await delay(200);
+}
+
+async function inspectDetectedSwitchBar(call) {
+  const state = await execute(
+    call,
+    `
+      const bar = document.querySelector('.viewer-detected-bar');
+      const chips = [...document.querySelectorAll('.viewer-detected-chip')];
+      return {
+        current: chips.find((chip) => chip.classList.contains('is-current'))
+          ?.textContent,
+        hidden: bar?.hidden,
+        items: chips.map((chip) => ({
+          ariaLabel: chip.getAttribute('aria-label'),
+          tagName: chip.tagName,
+          text: chip.textContent,
+        })),
+        scanAriaLabel: bar?.querySelector('.scan-button')?.getAttribute('aria-label'),
+      };
+    `,
+  );
+  if (
+    state.hidden !== false ||
+    state.current !== STRUCTURE_ID ||
+    state.scanAriaLabel !== 'Scan this page again' ||
+    JSON.stringify(state.items) !== JSON.stringify([
+      { ariaLabel: 'Open 1AON', tagName: 'BUTTON', text: '1AON' },
+      { ariaLabel: 'Open 1CRN', tagName: 'BUTTON', text: '1CRN' },
+    ])
+  ) {
+    throw new Error(`Detected-structure switch bar failed: ${JSON.stringify(state)}`);
+  }
+  log('detected-structure switch bar smoke passed');
 }
 
 async function waitForControlState(
@@ -480,6 +546,80 @@ async function smokeInteractions(call) {
   log('1AON interaction smoke passed and restored');
 }
 
+async function smokeImageDownload(call) {
+  await execute(
+    call,
+    `
+      window.__protpeekCapturedImage = undefined;
+      window.__protpeekOriginalAnchorClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.download.endsWith('.png') && this.href.startsWith('data:image/png')) {
+          window.__protpeekCapturedImage = this.href;
+          return;
+        }
+        return window.__protpeekOriginalAnchorClick.call(this);
+      };
+      document.querySelector('.image-button')?.click();
+    `,
+  );
+  await delay(150);
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 120_000) {
+    const state = await execute(
+      call,
+      `
+        const error = document.querySelector('.error-box');
+        const button = document.querySelector('.image-button');
+        return {
+          disabled: button?.disabled,
+          error: error !== null && !error.hidden ? error.textContent.trim() : '',
+          imageCaptured: typeof window.__protpeekCapturedImage === 'string',
+          status: document.querySelector('.load-status')?.textContent?.trim() ?? '',
+        };
+      `,
+    );
+    if (state.error !== '') {
+      throw new Error(`PNG view export failed: ${state.error}`);
+    }
+    if (state.disabled === false && state.status === '' && state.imageCaptured) {
+      const dimensions = await executeAsync(
+        call,
+        `
+          const done = arguments[arguments.length - 1];
+          const image = new Image();
+          image.onload = () => done({ height: image.naturalHeight, width: image.naturalWidth });
+          image.onerror = () => done({ error: 'The captured PNG could not be decoded' });
+          image.src = window.__protpeekCapturedImage;
+        `,
+      );
+      await execute(
+        call,
+        `
+          HTMLAnchorElement.prototype.click = window.__protpeekOriginalAnchorClick;
+          delete window.__protpeekCapturedImage;
+          delete window.__protpeekOriginalAnchorClick;
+        `,
+      );
+      if (
+        typeof dimensions !== 'object' ||
+        dimensions === null ||
+        typeof dimensions.width !== 'number' ||
+        typeof dimensions.height !== 'number' ||
+        Math.max(dimensions.width, dimensions.height) < 2048
+      ) {
+        throw new Error(`PNG view export is not high-resolution: ${JSON.stringify(dimensions)}`);
+      }
+      log(
+        `customized PNG view export smoke passed ` +
+          `(${dimensions.width}x${dimensions.height})`,
+      );
+      return;
+    }
+    await delay(250);
+  }
+  throw new Error('Timed out while exporting the customized PNG view');
+}
+
 async function captureViewport(call, path) {
   const screenshot = await call('GET', '/screenshot');
   await writeFile(path, Buffer.from(screenshot, 'base64'));
@@ -506,8 +646,22 @@ async function renderPngInFirefox(call, source, size, crop = null) {
         if (requestedCrop === null) {
           context.drawImage(bitmap, 0, 0, size, size);
         } else {
+          const cleaned = document.createElement('canvas');
+          cleaned.width = bitmap.width;
+          cleaned.height = bitmap.height;
+          const cleanedContext = cleaned.getContext('2d', { alpha: true });
+          cleanedContext.drawImage(bitmap, 0, 0);
+          const background = cleanedContext.getImageData(0, 0, 1, 1).data;
+          cleanedContext.fillStyle =
+            'rgb(' + background[0] + ',' + background[1] + ',' + background[2] + ')';
+          cleanedContext.fillRect(
+            0,
+            cleaned.height * 0.7,
+            cleaned.width * 0.17,
+            cleaned.height * 0.3,
+          );
           context.drawImage(
-            bitmap,
+            cleaned,
             requestedCrop.x,
             requestedCrop.y,
             requestedCrop.size,
@@ -553,9 +707,6 @@ async function moleculeCropInFirefox(call, source) {
         let maximumY = -1;
         for (let y = 0; y < canvas.height; y += 1) {
           for (let x = 0; x < canvas.width; x += 1) {
-            // Mol* draws its orientation helper in the lower-left corner. It
-            // is UI chrome, not molecular geometry, so exclude that region
-            // from both detection and the final molecule-only crop.
             if (x < canvas.width * 0.17 && y > canvas.height * 0.7) continue;
             const offset = (y * canvas.width + x) * 4;
             const difference =
@@ -669,6 +820,7 @@ async function main() {
     await execute(
       call,
       `
+        document.querySelector('[data-section="open"]')?.click();
         const input = document.querySelector('.identifier-input');
         if (!(input instanceof HTMLInputElement)) throw new Error('Identifier input missing');
         input.value = '${STRUCTURE_ID}';
@@ -681,6 +833,9 @@ async function main() {
       `loaded ${STRUCTURE_ID} (${loaded.chains} chain controls: ` +
         `${loaded.chainLabels.join(', ')}${loaded.chains > 5 ? ', …' : ''})`,
     );
+    await setDetectedStructures(call, [STRUCTURE_ID, '1CRN']);
+    await inspectDetectedSwitchBar(call);
+    await setDetectedStructures(call, []);
     await inspectStoreLayout(call);
 
     await execute(
@@ -703,6 +858,7 @@ async function main() {
     await captureViewport(call, storeScreenshot);
     await verifyPng(storeScreenshot, 640, 400);
     await smokeInteractions(call);
+    await smokeImageDownload(call);
 
     await setViewport(call, ICON_SOURCE_SIZE, ICON_SOURCE_SIZE);
     await execute(
@@ -710,7 +866,9 @@ async function main() {
       `
         for (const selector of [
           '.topbar',
-          '.article-bar',
+          '.bottom-nav',
+          '.app-page',
+          '.viewer-detected-bar',
           '.entity-strip',
           '.inspector',
           '.viewer-actions',
@@ -718,20 +876,29 @@ async function main() {
           '.error-box',
           '.hover-label',
           '.drop-overlay',
-          '.empty-state',
         ]) {
           const node = document.querySelector(selector);
           if (node instanceof HTMLElement) node.style.display = 'none';
         }
         const app = document.querySelector('.protpeek-app');
+        const workspace = document.querySelector('.viewer-workspace');
         const frame = document.querySelector('.viewer-frame');
-        if (!(app instanceof HTMLElement) || !(frame instanceof HTMLElement)) {
+        if (
+          !(app instanceof HTMLElement) ||
+          !(workspace instanceof HTMLElement) ||
+          !(frame instanceof HTMLElement)
+        ) {
           throw new Error('Viewer frame is missing');
         }
         Object.assign(app.style, {
           display: 'block',
           height: '${ICON_SOURCE_SIZE}px',
           minHeight: '0',
+          width: '${ICON_SOURCE_SIZE}px',
+        });
+        Object.assign(workspace.style, {
+          display: 'block',
+          height: '${ICON_SOURCE_SIZE}px',
           width: '${ICON_SOURCE_SIZE}px',
         });
         Object.assign(frame.style, {

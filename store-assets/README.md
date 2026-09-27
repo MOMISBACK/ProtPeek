@@ -16,9 +16,9 @@ npm run capture:store
 The script temporarily installs the Firefox release archive, loads `1AON`
 through the real extension UI, validates the short-height layout and the
 Focus/Isolate round trip, and captures `protpeek-640x400.png` at exactly
-640×400. It then
-excludes Mol*'s orientation helper from an adaptive, molecule-only square crop,
-derives `protpeek-icon-128.png` and the browser icon sizes with Firefox's canvas,
-and checks every PNG signature and exact dimensions in Node. Set
+640×400. It then excludes Mol*'s orientation helper from an adaptive,
+molecule-only square crop, derives `protpeek-icon-128.png` and the browser icon
+sizes with Firefox's canvas, and checks every PNG signature and exact
+dimensions in Node. Set
 `PROTPEEK_FIREFOX_BINARY` or `PROTPEEK_GECKODRIVER` when those executables are
 not in their usual locations.

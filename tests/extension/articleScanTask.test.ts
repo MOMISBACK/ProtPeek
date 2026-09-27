@@ -41,7 +41,7 @@ describe('scanArticleTab', () => {
     });
   });
 
-  it('explains that a restricted browser page cannot be scanned', async () => {
+  it('reports an inaccessible page after switching tabs', async () => {
     await expect(
       scanArticleTab(
         8,
@@ -50,7 +50,7 @@ describe('scanArticleTab', () => {
       ),
     ).resolves.toMatchObject({
       payload: {
-        error: 'This browser page cannot be scanned',
+        error: 'This page cannot be scanned',
         structures: [],
         tabId: 8,
       },

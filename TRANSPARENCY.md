@@ -14,14 +14,14 @@ only after an explicit user action.
 - local CIF, mmCIF, BinaryCIF, and PDB file contents;
 - article text, links, metadata, and JSON-LD inspected by each bounded scan;
 - Mol* parsing, structure construction, rendering, selections, and colours;
-- PDBx/mmCIF generation and the temporary object URL used to download the currently visible structure;
+- PDBx/mmCIF generation, high-resolution PNG rendering, and the temporary URLs used to download them;
 - sequences, chain and ligand metadata, active viewer state, and benchmarks.
 
 Local files are never uploaded. The article snapshot is processed inside the
 injected extension script; only compact structure detections return to the
 extension background. A debounced page monitor sends only a changed signal so
-the live panel can request another scan; it does not send DOM mutations or page
-text. Focus, isolation, chain visibility, selected-residue rendering,
+the live panel can request another scan; it sends neither DOM mutations nor
+page text. Focus, isolation, chain visibility, selected-residue rendering,
 and selection colours are local viewer state. Their pressed/active indicators
 are maintained in the panel and reversible actions are sent directly to the
 packaged Mol* viewer.
@@ -32,10 +32,14 @@ the browser to save the resulting `.cif` file. Hidden or isolated-away parts
 are omitted. This action neither uploads the structure nor contacts a ProtPeek
 service.
 
+The camera button renders the current customized view locally with Mol*'s
+offscreen image pass and asks the browser to save the resulting PNG. It does
+not upload the structure, image, camera state, or customizations.
+
 ## Network requests
 
-ProtPeek has no first-party API. Its application code makes remote requests
-only to these official structure services:
+ProtPeek has no first-party API. Its extension-page CSP restricts connections
+to these hosts:
 
 | Host | Trigger | Purpose |
 | --- | --- | --- |
@@ -50,26 +54,25 @@ endpoint, or remote script execution.
 
 ## Permissions
 
-- `activeTab`: temporary page access after a user gesture;
+- HTTP and HTTPS page access: bounded local scans while the panel is open;
 - `scripting`: injection of the bounded scanner and local page-change monitor;
 - `contextMenus`: explicit identifier selection workflow;
 - `storage`: session-only coordination between the MV3 background and panel;
-- HTTP(S) page access: automatic scans of the active tab while the panel is open;
-- exact RCSB and AlphaFold hosts listed above for structure downloads;
+- a CSP network allowlist containing only the RCSB and AlphaFold hosts above;
 - Chromium's generated `sidePanel` permission.
 
-The manifest spells page access as explicit `http://*/*` and `https://*/*`
-patterns rather than `<all_urls>`. ProtPeek does not request browsing history,
-cookies, identity, downloads, geolocation, camera, or microphone permissions.
+ProtPeek does not request access to local files or browser-internal pages,
+browsing history, cookies, identity, downloads, geolocation, camera, or
+microphone permissions.
 
 Saving the locally generated PDBx/mmCIF file uses a standard temporary link;
 it does not use or require the WebExtension `downloads` permission.
 
-While the panel is open, activation, completed-load, in-page navigation, and
-debounced document-change events request a fresh scan only for the active tab
-in the same browser window. Closing the panel removes its listeners, so page
-change signals no longer trigger scans. The toolbar and manual refresh control
-also request an immediate scan.
+When the panel opens, and while it remains open, activation, completed-load,
+in-page navigation, and debounced document-change events request a fresh scan
+only for the active tab in the same browser window. The declared HTTP and HTTPS
+host access makes this reliable across tab and page changes. Closing the panel
+removes the listeners that turn page-change signals into rescans.
 
 ## Storage
 

@@ -26,7 +26,7 @@
     </header>
     <main>
       <h1>Privacy Policy</h1>
-      <p class="meta">Last updated: 1 September 2026 · Applies to ProtPeek 0.1.1</p>
+      <p class="meta">Last updated: 27 September 2026 · Applies to ProtPeek 0.1.2</p>
 
       <div class="callout">
         ProtPeek has no user accounts, analytics, advertising, tracking,
@@ -45,21 +45,20 @@
 
       <h2>Article access</h2>
       <p>
-        ProtPeek locally inspects a bounded snapshot of the active HTTP(S)
-        document's visible text, links, metadata, page URL, and JSON-LD to
-        detect contextual structure references. Only compact detection results
-        return to the extension background; the page snapshot is not sent to
-        ProtPeek, RCSB, AlphaFold, or another server.
+        ProtPeek has access to HTTP and HTTPS pages so detection can follow the
+        active tab while the panel is open. It locally inspects a bounded
+        snapshot of the main document's visible text, links, metadata, page
+        URL, and JSON-LD to detect contextual PDB, UniProt, and AlphaFold
+        references. Only compact
+        detection results return to the extension background; the page
+        snapshot is not sent to ProtPeek, RCSB, AlphaFold, or another server.
       </p>
       <p>
-        Automatic refresh across newly opened or navigated tabs requires access
-        to HTTP and HTTPS pages. While the panel is open, ProtPeek rescans the
-        active tab after tab changes, completed navigation, in-page route
-        changes, or debounced article-content changes. A small panel control can
-        request an immediate manual refresh. A page monitor sends only a changed
-        signal, not DOM content, and closing the panel removes the listener that
-        turns those signals into rescans. Browser-internal and other restricted
-        pages cannot be scanned.
+        A bounded scan runs when the panel opens, the active tab changes,
+        navigation completes, article content changes, or the user presses the
+        rescan button. A debounced page monitor sends only a change signal, not
+        page content. Closing the panel removes the listener that turns those
+        signals into rescans.
       </p>
 
       <h2>Remote structure requests</h2>
@@ -104,8 +103,9 @@
       <p>
         CIF, mmCIF, BinaryCIF, and PDB files chosen or dropped by the user are
         read and rendered locally. The download control creates a local
-        PDBx/mmCIF file from the currently visible molecular structure; this
-        does not send the structure to a server.
+        PDBx/mmCIF file from the currently visible molecular structure. The
+        camera control renders the customized view as a high-resolution PNG.
+        Neither action sends the structure or image to a server.
       </p>
 
       <h2>Storage and retention</h2>
@@ -125,20 +125,17 @@
 
       <h2>Permissions</h2>
       <ul>
-        <li><strong>activeTab:</strong> click-triggered page-access fallback.</li>
+        <li><strong>HTTP and HTTPS page access:</strong> bounded local scans while the panel is open.</li>
         <li><strong>scripting:</strong> injection of the bounded scanner and local page-change monitor.</li>
         <li><strong>contextMenus:</strong> explicit “View in ProtPeek” selection workflow.</li>
         <li><strong>storage:</strong> session-scoped background/panel coordination.</li>
         <li><strong>sidePanel:</strong> Chromium's native side-panel surface.</li>
-        <li><strong>HTTP(S) page access:</strong> automatic active-tab rescans while the panel is open.</li>
-        <li><strong>Exact provider hosts:</strong> download user-requested structure data.</li>
+        <li><strong>CSP network allowlist:</strong> permits connections only to the official RCSB and AlphaFold hosts.</li>
       </ul>
       <p>
-        The manifest declares <code>http://*/*</code> and
-        <code>https://*/*</code> explicitly; this is broad page access required
-        for automatic new-tab refresh. ProtPeek does not request browsing
-        history, cookies, identity, downloads, geolocation, camera, or
-        microphone.
+        ProtPeek does not request access to local files or browser-internal
+        pages, browsing history, cookies, identity, downloads, geolocation,
+        camera, or microphone.
       </p>
 
       <h2>Sharing, sale, and user control</h2>

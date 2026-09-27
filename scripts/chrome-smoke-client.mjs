@@ -64,10 +64,14 @@ await pause(400);
 const initial = await evaluate(`(() => ({
   bodyHeight: document.body.scrollHeight,
   bodyWidth: document.body.scrollWidth,
-  brand: document.querySelector('.brand')?.textContent,
   canvasCount: document.querySelectorAll('canvas').length,
-  chooseFile: document.querySelector('.empty-file-button')?.textContent,
-  empty: document.querySelector('.empty-title')?.textContent,
+  openHidden: document.querySelector('.open-view')?.hidden,
+  pageSelected: document.querySelector('[data-section="page"]')?.getAttribute('aria-selected'),
+  pageTitle: document.querySelector('.page-title')?.textContent,
+  scanButtonAriaLabel: document.querySelector('.page-heading .scan-button')
+    ?.getAttribute('aria-label'),
+  scanStatus: document.querySelector('.page-scan-status')?.textContent,
+  topbarHidden: document.querySelector('.topbar')?.hidden,
   molstarLoaded: performance.getEntriesByType('resource')
     .some((entry) => entry.name.includes('MolstarViewer')),
   placeholder: document.querySelector('.identifier-input')?.getAttribute('placeholder'),
@@ -75,6 +79,16 @@ const initial = await evaluate(`(() => ({
   viewportHeight: document.documentElement.clientHeight,
   viewportWidth: document.documentElement.clientWidth,
 }))()`);
+
+const openNavigation = await evaluate(`(() => {
+  document.querySelector('[data-section="open"]')?.click();
+  return {
+    dropzone: document.querySelector('.dropzone')?.textContent?.replace(/\\s+/g, ' ').trim(),
+    openHidden: document.querySelector('.open-view')?.hidden,
+    openSelected: document.querySelector('[data-section="open"]')?.getAttribute('aria-selected'),
+    pageHidden: document.querySelector('.page-view')?.hidden,
+  };
+})()`);
 
 const documentNode = await call('DOM.getDocument', { depth: -1 });
 const inputNode = await call('DOM.querySelector', {
@@ -92,8 +106,8 @@ await evaluate(`(() => {
   input?.dispatchEvent(new Event('change', { bubbles: true }));
 })()`);
 const initialLoading = await evaluate(`(() => ({
-  emptyHidden: document.querySelector('.empty-state')?.hidden,
   status: document.querySelector('.load-status')?.textContent,
+  viewerHidden: document.querySelector('.viewer-workspace')?.hidden,
 }))()`);
 
 let loaded;
@@ -128,9 +142,10 @@ for (let attempt = 0; attempt < 80; attempt += 1) {
       ?.getAttribute('aria-label'),
     downloadDisabled: document.querySelector('.download-button')?.disabled,
     downloadHidden: document.querySelector('.download-button')?.hidden,
-    resetHidden: document.querySelector(
-      '.viewer-actions .viewer-button:not(.download-button)',
-    )?.hidden,
+    imageAriaLabel: document.querySelector('.image-button')?.getAttribute('aria-label'),
+    imageDisabled: document.querySelector('.image-button')?.disabled,
+    imageHidden: document.querySelector('.image-button')?.hidden,
+    resetHidden: document.querySelector('[title="Reset view"]')?.hidden,
     sequenceCells: document.querySelectorAll('.residue-cell').length,
   }))()`);
   if (
@@ -193,6 +208,9 @@ if (loaded?.errorHidden !== false) {
         ?.getAttribute('aria-label'),
       downloadDisabled: document.querySelector('.download-button')?.disabled,
       downloadHidden: document.querySelector('.download-button')?.hidden,
+      imageAriaLabel: document.querySelector('.image-button')?.getAttribute('aria-label'),
+      imageDisabled: document.querySelector('.image-button')?.disabled,
+      imageHidden: document.querySelector('.image-button')?.hidden,
       focusDisabled: [...document.querySelectorAll('.selection-actions button')]
         .find((node) => node.textContent === 'Focus')?.disabled,
       selectionRepresentationDisabled: selectionRepresentation?.disabled,
@@ -451,6 +469,20 @@ const interaction = await evaluate(`(() => ({
   selected: document.querySelector('.selected-label')?.textContent,
 }))()`);
 
+const navigation = await evaluate(`(() => {
+  document.querySelector('[data-section="page"]')?.click();
+  const page = {
+    pageHidden: document.querySelector('.page-view')?.hidden,
+    viewerHidden: document.querySelector('.viewer-workspace')?.hidden,
+    viewStructureHidden: document.querySelector('.header-action')?.hidden,
+  };
+  document.querySelector('.header-action')?.click();
+  return {
+    page,
+    viewerHiddenAfterReturn: document.querySelector('.viewer-workspace')?.hidden,
+  };
+})()`);
+
 let remote = null;
 let remoteElapsedMs = null;
 let remoteLoading = null;
@@ -458,14 +490,15 @@ let remoteTiming = null;
 if (remoteIdentifier !== undefined) {
   const remoteStartedAt = globalThis.performance.now();
   remoteLoading = await evaluate(`(() => {
+    document.querySelector('[data-section="open"]')?.click();
     const input = document.querySelector('.identifier-input');
     if (input instanceof HTMLInputElement) input.value = ${JSON.stringify(remoteIdentifier)};
     document.querySelector('.identifier-form')?.requestSubmit();
     return {
       chains: [...document.querySelectorAll('.chain-list .entity-chip')]
         .map((node) => node.textContent),
-      emptyHidden: document.querySelector('.empty-state')?.hidden,
       status: document.querySelector('.load-status')?.textContent,
+      viewerHidden: document.querySelector('.viewer-workspace')?.hidden,
     };
   })()`);
   for (let attempt = 0; attempt < 120; attempt += 1) {
@@ -489,14 +522,34 @@ socket.close();
 
 const failures = [];
 if (initial.ready !== 'complete') failures.push('panel document did not finish loading');
-if (initial.brand !== 'ProtPeek') failures.push('brand was not rendered');
-if (initial.empty !== 'Drop a structure') failures.push('empty state was not rendered');
-if (initial.chooseFile !== 'Choose file') failures.push('file chooser was not rendered');
+if (initial.pageTitle !== 'Read the paper.See the structure.') {
+  failures.push('Page hero was not rendered');
+}
+if (initial.scanStatus !== 'Scanning this page…') {
+  failures.push('automatic scan status was not rendered');
+}
+if (initial.scanButtonAriaLabel !== 'Scan this page again') {
+  failures.push('manual rescan control was not rendered');
+}
+if (initial.topbarHidden !== true) {
+  failures.push('redundant in-panel header was visible before a structure load');
+}
+if (initial.pageSelected !== 'true' || initial.openHidden !== true) {
+  failures.push('Page was not the default section');
+}
+if (
+  openNavigation.openSelected !== 'true' ||
+  openNavigation.openHidden !== false ||
+  openNavigation.pageHidden !== true ||
+  !openNavigation.dropzone?.includes('Drop a structure file here')
+) {
+  failures.push('Open navigation or local-file dropzone failed');
+}
 if (initial.canvasCount !== 0 || initial.molstarLoaded) {
   failures.push('Molstar was loaded before a structure was requested');
 }
-if (initialLoading.emptyHidden !== true) {
-  failures.push('empty state remained visible during the initial load');
+if (initialLoading.viewerHidden !== false) {
+  failures.push('viewer did not appear during the initial load');
 }
 if (initial.bodyWidth > initial.viewportWidth) failures.push('320 px layout overflows horizontally');
 if (initial.bodyHeight > initial.viewportHeight) failures.push('700 px layout overflows vertically');
@@ -506,19 +559,41 @@ if (!loaded?.chains.includes('Chain A')) failures.push('fixture chain A was not 
 if (loaded?.downloadHidden !== false || loaded?.downloadDisabled !== false) {
   failures.push('download button was not available after loading');
 }
-if (loaded?.downloadAriaLabel !== 'Download structure as PDBx/mmCIF') {
+if (loaded?.downloadAriaLabel !== 'Download structure file as PDBx/mmCIF') {
   failures.push('download button is missing its accessible label');
 }
+if (
+  loaded?.imageHidden !== false ||
+  loaded?.imageDisabled !== false ||
+  loaded?.imageAriaLabel !== 'Download current view as PNG'
+) {
+  failures.push('PNG image download button was not available after loading');
+}
 if (interaction.errorText !== '') failures.push(`residue selection failed: ${interaction.errorText}`);
+if (
+  navigation.page.pageHidden !== false ||
+  navigation.page.viewerHidden !== true ||
+  navigation.page.viewStructureHidden !== false ||
+  navigation.viewerHiddenAfterReturn !== false
+) {
+  failures.push('Page/viewer navigation could not be reversed');
+}
 if (operations.controls?.chainLabel !== 'Chain A') {
   failures.push('chain control does not use the explicit Chain A label');
 }
 if (
   operations.controls?.downloadHidden !== false ||
   operations.controls?.downloadDisabled !== false ||
-  operations.controls?.downloadAriaLabel !== 'Download structure as PDBx/mmCIF'
+  operations.controls?.downloadAriaLabel !== 'Download structure file as PDBx/mmCIF'
 ) {
   failures.push('download control is missing from the loaded viewer');
+}
+if (
+  operations.controls?.imageHidden !== false ||
+  operations.controls?.imageDisabled !== false ||
+  operations.controls?.imageAriaLabel !== 'Download current view as PNG'
+) {
+  failures.push('PNG image control is missing from the loaded viewer');
 }
 if (operations.controls?.focusDisabled !== true) {
   failures.push('Focus was enabled before a selection existed');
@@ -625,8 +700,8 @@ if (
 }
 if (operations.afterSurface?.errorHidden === false) failures.push('surface rendering failed');
 if (remote?.errorHidden === false) failures.push(`remote load failed: ${remote.errorText}`);
-if (remoteIdentifier !== undefined && remoteLoading?.emptyHidden !== true) {
-  failures.push('empty state became visible during replacement acquisition');
+if (remoteIdentifier !== undefined && remoteLoading?.viewerHidden !== false) {
+  failures.push('viewer disappeared during replacement acquisition');
 }
 if (remoteIdentifier !== undefined && !remoteLoading?.chains.includes('Chain A')) {
   failures.push('current structure was cleared before replacement acquisition finished');
@@ -645,6 +720,8 @@ process.stdout.write(
     loaded,
     localElapsedMs,
     localTiming,
+    navigation,
+    openNavigation,
     operations,
     remote,
     remoteElapsedMs,

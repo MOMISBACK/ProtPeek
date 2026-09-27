@@ -71,10 +71,6 @@ function choose(select: HTMLSelectElement, value: string): void {
   select.dispatchEvent(new Event('change'));
 }
 
-function expand(panel: StructurePanel): void {
-  panel.customizationPanel.setAttribute('open', '');
-}
-
 describe('StructurePanel compact controls', () => {
   beforeEach(() => {
     const { document, window } = parseHTML(
@@ -93,47 +89,6 @@ describe('StructurePanel compact controls', () => {
 
   afterEach(() => vi.unstubAllGlobals());
 
-  it('keeps all lower customization in a collapsed native disclosure', () => {
-    const callbacks = createCallbacks();
-    const panel = new StructurePanel(callbacks);
-    const sequence = panel.inspector.querySelector('.sequence-scroll');
-    Object.defineProperty(sequence, 'clientWidth', { value: 320 });
-
-    panel.setMetadata(METADATA);
-
-    const summary = panel.customizationPanel.querySelector<HTMLElement>(
-      'summary',
-    );
-    const content = panel.customizationPanel.querySelector<HTMLElement>(
-      '.customization-content',
-    );
-    expect(panel.customizationPanel.tagName).toBe('DETAILS');
-    expect(panel.customizationPanel.hidden).toBe(false);
-    expect(panel.customizationPanel.hasAttribute('open')).toBe(false);
-    expect(summary?.tagName).toBe('SUMMARY');
-    expect(summary?.textContent).toBe('Customize structure');
-    expect([...(content?.children ?? [])]).toEqual(
-      expect.arrayContaining([panel.entityStrip, panel.inspector]),
-    );
-    expect(panel.entityStrip.hidden).toBe(false);
-    expect(panel.entityStrip.querySelector('.chain-chip')).not.toBeNull();
-
-    expand(panel);
-    expect(panel.customizationPanel.hasAttribute('open')).toBe(true);
-    panel.entityStrip.querySelector<HTMLButtonElement>('.chain-chip')?.click();
-    const focus = buttonNamed(panel.inspector, 'Focus');
-    expect(focus.getAttribute('aria-pressed')).toBe('true');
-    vi.clearAllMocks();
-    summary?.click();
-    for (const callback of Object.values(callbacks)) {
-      expect(callback).not.toHaveBeenCalled();
-    }
-    expect(focus.getAttribute('aria-pressed')).toBe('true');
-    panel.customizationPanel.removeAttribute('open');
-    expect(panel.customizationPanel.hasAttribute('open')).toBe(false);
-    panel.dispose();
-  });
-
   it('groups coherent controls and exposes every action reversibly', () => {
     const callbacks = createCallbacks();
     const panel = new StructurePanel(callbacks);
@@ -141,7 +96,19 @@ describe('StructurePanel compact controls', () => {
     Object.defineProperty(sequence, 'clientWidth', { value: 320 });
 
     panel.setMetadata(METADATA);
-    expand(panel);
+
+    const customization = panel.inspector.querySelector<HTMLDetailsElement>(
+      '.customization-panel',
+    );
+    expect(customization?.open).toBe(false);
+    expect(customization?.querySelector('summary')?.textContent).toContain(
+      'Customize view',
+    );
+    expect(customization?.contains(panel.entityStrip)).toBe(true);
+    expect(customization?.querySelector('.sequence-scroll')).toBe(sequence);
+    expect(customization?.querySelector('.customization-state')).toBeNull();
+    if (customization !== null) customization.open = true;
+    expect(customization?.open).toBe(true);
 
     const modes = panel.inspector.querySelector('.structure-modes');
     const modeSelects = modes?.querySelectorAll<HTMLSelectElement>('select');
@@ -279,7 +246,10 @@ describe('StructurePanel compact controls', () => {
     const sequence = panel.inspector.querySelector('.sequence-scroll');
     Object.defineProperty(sequence, 'clientWidth', { value: 320 });
     panel.setMetadata(METADATA);
-    expand(panel);
+    const customization = panel.inspector.querySelector<HTMLDetailsElement>(
+      '.customization-panel',
+    );
+    if (customization !== null) customization.open = true;
 
     const focus = buttonNamed(panel.inspector, 'Focus');
     const isolate = buttonNamed(panel.inspector, 'Isolate');
@@ -323,7 +293,7 @@ describe('StructurePanel compact controls', () => {
       choose(globalSelects[1], 'uniform');
     }
     panel.setMetadata(METADATA);
-    expand(panel);
+    expect(customization?.open).toBe(false);
     expect(globalSelects[0]?.value).toBe('cartoon');
     expect(globalSelects[1]?.value).toBe('chain');
     expect(selectedRepresentation?.value).toBe('highlight');
@@ -337,8 +307,6 @@ describe('StructurePanel compact controls', () => {
     expect(focus.getAttribute('aria-pressed')).toBe('false');
 
     panel.clear();
-    expect(panel.customizationPanel.hidden).toBe(true);
-    expect(panel.customizationPanel.hasAttribute('open')).toBe(false);
     expect(panel.entityStrip.hidden).toBe(true);
     expect(panel.inspector.hidden).toBe(true);
     panel.dispose();
@@ -355,7 +323,6 @@ describe('StructurePanel compact controls', () => {
     const sequence = panel.inspector.querySelector('.sequence-scroll');
     Object.defineProperty(sequence, 'clientWidth', { value: 320 });
     panel.setMetadata(METADATA);
-    expand(panel);
 
     const representation = panel.inspector.querySelector<HTMLSelectElement>(
       '[aria-label="Structure representation"]',

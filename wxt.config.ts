@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 import { defineConfig } from 'wxt';
 
-const STRUCTURE_HOSTS = [
-  'https://models.rcsb.org/*',
-  'https://files.rcsb.org/*',
-  'https://alphafold.ebi.ac.uk/*',
+const STRUCTURE_ORIGINS = [
+  'https://models.rcsb.org',
+  'https://files.rcsb.org',
+  'https://alphafold.ebi.ac.uk',
 ];
 
-// Automatic rescans while the panel is open need persistent access to the
-// active article after a tab switch or cross-origin navigation. The scanner
-// still runs only on demand from the live panel and keeps page data local.
 const ARTICLE_HOSTS = ['http://*/*', 'https://*/*'];
 
 const ICONS = {
@@ -43,13 +40,12 @@ export default defineConfig({
     action: {
       default_icon: ICONS,
       default_title: 'Open ProtPeek',
-      ...(browser === 'firefox' ? { default_area: 'navbar' } : {}),
     },
     icons: ICONS,
-    permissions: ['activeTab', 'scripting', 'contextMenus', 'storage'],
-    host_permissions: [...ARTICLE_HOSTS, ...STRUCTURE_HOSTS],
+    permissions: ['scripting', 'contextMenus', 'storage'],
+    host_permissions: ARTICLE_HOSTS,
     content_security_policy: {
-      extension_pages: "script-src 'self'; object-src 'self';",
+      extension_pages: `script-src 'self'; object-src 'self'; connect-src ${STRUCTURE_ORIGINS.join(' ')};`,
     },
     ...(browser === 'chrome'
       ? { minimum_chrome_version: '116' }

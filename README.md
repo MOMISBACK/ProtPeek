@@ -2,18 +2,19 @@
 
 ProtPeek is a focused protein-structure viewer that lives in the browser side panel. It is designed for quickly moving from a scientific article to an interactive 3D structure without opening a full molecular-modelling application.
 
-Version `0.1.1` provides one Manifest V3 codebase for Firefox and Chromium, a custom lightweight interface, and Mol* as the rendering engine.
+Version `0.1.2` provides one Manifest V3 codebase for Firefox and Chromium, a custom lightweight interface, and Mol* as the rendering engine.
 
 ## What it does
 
 - Opens in Firefox's sidebar or Chromium's side panel.
-- Scans the active article locally for contextual structure references in text, official links, metadata, and JSON-LD.
+- Scans the active article locally for contextual PDB, UniProt, and AlphaFold references in text, official links, metadata, and JSON-LD.
 - Refreshes detections when the active tab changes, navigation completes, or article content is updated while the panel is open.
 - Accepts legacy and extended PDB IDs, UniProt accessions, and AlphaFold IDs.
 - Loads remote PDB structures as BinaryCIF with an mmCIF fallback.
 - Resolves UniProt and AlphaFold identifiers through AlphaFold DB.
 - Reads local `.cif`, `.mmcif`, `.bcif`, and `.pdb` files without uploading them.
 - Downloads the currently visible structure as a PDBx/mmCIF `.cif` file generated locally in the browser.
+- Exports the current customized view as a locally rendered high-resolution PNG, up to 2560 px on its long edge.
 - Shows chains, virtualized sequences, missing residues, and detected ligands.
 - Supports residue selection, reversible focus and isolation, direct chain visibility, selection colouring, and global or selected-residue representations, with visible active states.
 - Initializes Mol* in parallel with structure acquisition on the first explicit load, reuses that viewer, and cancels superseded loads.
@@ -35,26 +36,18 @@ Residue expressions include `254`, `C254`, `A:254`, `A:C254`, `A:254,278,281`, a
 
 ## Using ProtPeek
 
-1. Click the ProtPeek toolbar action while viewing an HTTP or HTTPS article. The current page is scanned and the side panel opens.
-2. Select a detected PDB, UniProt, or AlphaFold reference, enter an identifier manually, or drop/choose a supported local file.
-3. Rotate, pan, and zoom in the viewer. Expand **Customize structure** below it to inspect chains, ligands, sequences, and residue selections; this panel starts collapsed for each structure. Focus, Isolate, chain visibility, and selection colours expose their active state and can be toggled back; **Show all** restores the complete view.
-4. Use the download button above the viewer to save the currently visible structure as a locally generated PDBx/mmCIF `.cif` file. Hidden or isolated parts are omitted from that export.
+1. Click the ProtPeek toolbar action while viewing an HTTP or HTTPS article. The current page is scanned automatically and the side panel opens on **Page**.
+2. Select a detected structure from **Page**. For a PDB, UniProt, or AlphaFold identifier—or a supported local file—switch to **Open**.
+3. Rotate, pan, and zoom in the viewer. Use the compact controls to inspect chains, ligands, sequences, and residue selections. Focus, Isolate, chain visibility, and selection colours expose their active state and can be toggled back; **Show all** restores the complete view.
+4. Use the download button above the viewer to save the currently visible structure as a locally generated PDBx/mmCIF `.cif` file. Hidden or isolated parts are omitted from that export. Use the camera button beside it to save the current view as a high-resolution PNG.
 5. Select an exact identifier in a web page and use **View in ProtPeek** from the context menu for a direct load.
 
-Firefox asks for ProtPeek to start in the navigation toolbar. To keep ProtPeek
-one click away if the browser still places it in the **Extensions** menu, choose
-**Pin** or **Pin to Toolbar** next to ProtPeek. Chrome and Chromium keep initial
-toolbar pinning under browser and user control, so an extension cannot force
-itself to remain pinned during installation. Once visible, clicking the
-ProtPeek icon opens its native side panel or sidebar directly.
-
-Automatic refresh requires access to HTTP and HTTPS pages. ProtPeek uses that
-access only to scan the active tab locally while its panel is open, or after an
-explicit toolbar click; it does not send article contents anywhere. Newly
-opened tabs, completed navigations, in-page route changes, and article content
-added after load are rescanned automatically. A small refresh button in the
-panel header is available for an immediate manual rescan. Browser-internal and
-other restricted pages still cannot be scanned.
+ProtPeek requests access to HTTP and HTTPS pages so automatic detection keeps
+working when the active tab or page content changes. Access is used only for
+bounded local scans while the panel is open. A debounced page monitor sends
+only a change signal; it never transfers page content. ProtPeek installs no
+manifest-registered persistent content script and sends no article content to
+a server.
 
 ProtPeek uses each browser's native sidebar/side-panel surface. Its left or
 right placement follows the browser-wide user preference and cannot be forced
@@ -174,7 +167,7 @@ The optional final argument exercises a remote replacement load; use `P69905` fo
 ## Architecture
 
 ```text
-Article → active panel scan → ArticleStructureScanner
+Article → bounded local scan → ArticleStructureScanner
                                 ↓ detected structure ID
                               ProtPeekApp
                               ├─ structure acquisition

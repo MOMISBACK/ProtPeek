@@ -6,12 +6,8 @@ const ROOT_DIR = resolve(import.meta.dirname, '..');
 const PACKAGE_VERSION = JSON.parse(
   readFileSync(resolve(ROOT_DIR, 'package.json'), 'utf8'),
 ).version;
-const STRICT_CSP = "script-src 'self'; object-src 'self';";
-const STRUCTURE_HOST_PERMISSIONS = [
-  'https://alphafold.ebi.ac.uk/*',
-  'https://files.rcsb.org/*',
-  'https://models.rcsb.org/*',
-];
+const STRICT_CSP =
+  "script-src 'self'; object-src 'self'; connect-src https://models.rcsb.org https://files.rcsb.org https://alphafold.ebi.ac.uk;";
 const ARTICLE_HOST_PERMISSIONS = ['http://*/*', 'https://*/*'];
 const ICONS = {
   16: 'icon-16.png',
@@ -25,12 +21,7 @@ const TARGETS = [
   {
     name: 'Chrome',
     manifestPath: '.output/chrome-mv3/manifest.json',
-    action: {
-      default_icon: ICONS,
-      default_title: 'Open ProtPeek',
-    },
     permissions: [
-      'activeTab',
       'contextMenus',
       'scripting',
       'sidePanel',
@@ -43,12 +34,7 @@ const TARGETS = [
   {
     name: 'Firefox',
     manifestPath: '.output/firefox-mv3/manifest.json',
-    action: {
-      default_area: 'navbar',
-      default_icon: ICONS,
-      default_title: 'Open ProtPeek',
-    },
-    permissions: ['activeTab', 'contextMenus', 'scripting', 'storage'],
+    permissions: ['contextMenus', 'scripting', 'storage'],
     panelKey: 'sidebar_action',
     panel: {
       default_panel: 'sidepanel.html',
@@ -141,7 +127,7 @@ for (const target of TARGETS) {
     target.name,
     'host_permissions',
     manifest.host_permissions,
-    [...ARTICLE_HOST_PERMISSIONS, ...STRUCTURE_HOST_PERMISSIONS],
+    ARTICLE_HOST_PERMISSIONS,
   );
   checkEqual(
     target.name,
@@ -150,7 +136,10 @@ for (const target of TARGETS) {
     { extension_pages: STRICT_CSP },
   );
   checkEqual(target.name, 'icons', manifest.icons, ICONS);
-  checkEqual(target.name, 'action', manifest.action, target.action);
+  checkEqual(target.name, 'action', manifest.action, {
+    default_icon: ICONS,
+    default_title: 'Open ProtPeek',
+  });
   checkEqual(target.name, target.panelKey, manifest[target.panelKey], target.panel);
 
   if (target.name === 'Chrome') {
@@ -191,9 +180,7 @@ for (const target of TARGETS) {
 
   const allUrlsPath = findString(manifest, '<all_urls>');
   if (allUrlsPath !== null) {
-    issues.push(
-      `${target.name}: use explicit HTTP(S) article origins instead of <all_urls> at ${allUrlsPath}`,
-    );
+    issues.push(`${target.name}: forbidden <all_urls> found at ${allUrlsPath}`);
   }
 }
 

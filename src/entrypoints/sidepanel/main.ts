@@ -19,9 +19,7 @@ if (root === null) {
   throw new Error('ProtPeek root element is missing');
 }
 
-const app = new ProtPeekApp(root, {
-  onArticleRefresh: () => requestActiveArticleRefresh(),
-});
+const app = new ProtPeekApp(root);
 void app.initialize();
 
 // Listen from the live panel document so ordinary background tab changes never
@@ -50,25 +48,6 @@ function requestArticleRefresh(tabId: number, windowId: number): void {
     .sendMessage(sidePanelTabActivatedMessage(tabId, windowId))
     .catch((error: unknown) =>
       logger.warn('Could not request an article refresh', error),
-    );
-}
-
-function requestActiveArticleRefresh(): void {
-  void browser.windows
-    .getCurrent()
-    .then(async (currentWindow) => {
-      const windowId = currentWindow.id;
-      if (windowId === undefined) return;
-      const [tab] = await browser.tabs.query({ active: true, windowId });
-      if (tab?.id === undefined) return;
-      if (currentTabId !== tab.id) {
-        currentTabId = tab.id;
-        app.activateArticleTab(tab.id);
-      }
-      requestArticleRefresh(tab.id, windowId);
-    })
-    .catch((error: unknown) =>
-      logger.warn('Could not refresh the active article', error),
     );
 }
 

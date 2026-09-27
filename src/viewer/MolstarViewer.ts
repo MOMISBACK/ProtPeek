@@ -28,6 +28,7 @@ import type {
 import type {
   StructureColorMode,
   StructureExport,
+  StructureImageExport,
   StructureRepresentation,
   SelectionRepresentation,
   StructureViewer,
@@ -38,6 +39,7 @@ import {
   structureExportBlockName,
   structureExportFilename,
 } from './structureExport';
+import { imageExportDimensions } from './imageExport';
 import { extractMolstarMetadata } from './molstarMetadata';
 import { atomicResidueLociFromClick } from './molstarInteraction';
 import {
@@ -367,6 +369,48 @@ export class MolstarViewer implements StructureViewer {
       filename: identity.filename,
       mimeType: 'chemical/x-cif',
       text,
+    };
+  }
+
+  async exportCurrentImage(): Promise<StructureImageExport> {
+    this.#assertActive();
+    const identity = this.#exportIdentity;
+    const screenshot = this.#plugin.helpers.viewportScreenshot;
+    if (identity === undefined || screenshot === undefined) {
+      throw new Error('No visible structure is available to capture');
+    }
+    const webgl = this.#plugin.canvas3d?.webgl;
+    if (webgl === undefined) {
+      throw new Error('The current view is not ready to capture');
+    }
+    const { gl } = webgl;
+    const maximumDimension = Math.floor(
+      Math.min(webgl.maxRenderbufferSize, webgl.maxTextureSize) / 2,
+    );
+    const dimensions = imageExportDimensions(
+      gl.drawingBufferWidth,
+      gl.drawingBufferHeight,
+      maximumDimension,
+    );
+    const previousValues = screenshot.values;
+    screenshot.behaviors.values.next({
+      ...previousValues,
+      format: { name: 'png', params: {} },
+      resolution: { name: 'custom', params: dimensions },
+    });
+    let dataUrl: string;
+    try {
+      dataUrl = await screenshot.getImageDataUri();
+    } finally {
+      screenshot.behaviors.values.next(previousValues);
+    }
+    if (!dataUrl.startsWith('data:image/png')) {
+      throw new Error('The current view could not be encoded as PNG');
+    }
+    return {
+      dataUrl,
+      filename: identity.filename.replace(/\.[^.]+$/u, '') + '.png',
+      mimeType: 'image/png',
     };
   }
 

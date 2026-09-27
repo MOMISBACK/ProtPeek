@@ -44,11 +44,18 @@ export interface StructureExport {
   text: string;
 }
 
+export interface StructureImageExport {
+  dataUrl: string;
+  filename: string;
+  mimeType: 'image/png';
+}
+
 export interface StructureViewer {
   cancelCurrentTask(): void;
   clear(): Promise<void>;
   colorSelection(color: number | null): Promise<void>;
   dispose(): void;
+  exportCurrentImage(): Promise<StructureImageExport>;
   exportCurrentStructure(): StructureExport;
   focusChain(chainId: string): void;
   focusSelection(): void;

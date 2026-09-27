@@ -1,12 +1,12 @@
 # ProtPeek architecture
 
-This document describes the implementation in ProtPeek `0.1.1`. The design keeps browser integration, structure acquisition, molecular rendering, and the user interface behind small explicit boundaries.
+This document describes the implementation in ProtPeek `0.1.2`. The design keeps browser integration, structure acquisition, molecular rendering, and the user interface behind small explicit boundaries.
 
 ## System flow
 
 ```text
 Article page
-  │ toolbar click or live-panel refresh
+  │ panel open / active-page change
   ▼
 `article-scan.ts`
   │ bounded, serializable page snapshot
@@ -71,10 +71,11 @@ The configured minimums are Chrome 116 and Firefox 140. Firefox receives a backg
 
 ## Article scan boundary
 
-The toolbar action opens the panel and injects the unlisted `article-scan.js`
-script into the active tab. Explicit HTTP(S) host access lets the live panel
-repeat that bounded scan when the active tab or page changes. There is no
-manifest-registered persistent content script and no `<all_urls>` declaration.
+Opening the panel and subsequent active-page changes inject the unlisted
+`article-scan.js` script once into the active HTTP or HTTPS tab. The manifest
+declares those two web-page patterns so switching tabs remains automatic.
+There is no manifest-registered persistent content script, no access to local
+files, and no access to browser-internal pages.
 
 The injected entrypoint captures one bounded snapshot:
 
@@ -94,14 +95,13 @@ spellings.
 Only the compact detection array crosses back to the background. `articleStructuresFromScanResult` treats the injected result as untrusted serialized data and validates its complete shape before it reaches the UI.
 
 The injected script also installs one idempotent, debounced mutation monitor.
-It sends only a page-changed signal; the live panel then requests a new bounded
-snapshot. This detects article content rendered after initial load without
-transferring mutations or page contents through messaging.
+It sends only a page-changed signal; the live panel then requests another
+bounded snapshot. It never transfers DOM mutations or page text.
 
 Scan generations are tracked per browser window. A result from an older tab or
-scan cannot overwrite a newer one. While the panel is open, active-tab changes,
-completed navigations, in-page URL changes, and debounced document mutations
-request a fresh scan; a manual header control can request one immediately.
+scan cannot overwrite a newer one. Active-tab changes, completed navigations,
+in-page route changes, and debounced document mutations request a fresh scan
+while the panel is open; the refresh control can request one immediately.
 
 ## Identifiers and loading
 
@@ -142,10 +142,8 @@ The current pipeline:
 The viewer supports camera reset, chain visibility, residue and ligand
 selection, focus, isolation, overpaint colouring, cartoon/surface polymer
 rendering, and highlight/sticks/ball-and-stick selection rendering. The panel
-groups its chain, ligand, sequence, residue, and display controls in one native
-disclosure that starts collapsed for each structure and remains keyboard
-accessible. It exposes focus, isolate, chain visibility, and selection colours
-as reversible controls with `aria-pressed` and visible active states. A second Focus resets
+exposes focus, isolate, chain visibility, and selection colours as reversible
+controls with `aria-pressed` and visible active states. A second Focus resets
 the camera; a second Isolate or **Show all** restores the full structure and
 camera. Asynchronous actions report success so the panel can roll back an
 optimistic control state after a viewer failure. Mol* interaction events
@@ -163,6 +161,19 @@ derived from the source identifier or local filename, normalized to a safe
 through a temporary object URL, and schedules that URL for revocation after
 the click. The structure is not uploaded, no backend is involved, and the
 extension does not need the WebExtension `downloads` permission.
+
+## High-resolution PNG export
+
+`MolstarViewer.exportCurrentImage()` uses Mol*'s offscreen image pass rather
+than enlarging the visible canvas. It preserves the current camera, colours,
+visibility, and representations, keeps the viewport aspect ratio, and targets
+2560 pixels on the long edge. The dimensions are reduced only when required by
+the active GPU's texture or renderbuffer limit. The previous screenshot state
+is restored after every export.
+
+The resulting PNG data URL is downloaded through the same browser-native,
+temporary-link mechanism as the structure export. The image is rendered and
+saved locally and requires neither a backend nor the `downloads` permission.
 
 ## Performance decisions
 
@@ -196,12 +207,13 @@ Vitest runs in Node and covers identifiers, contextual scanning, serialization v
 After both WXT builds, `npm run verify:build` reads the generated Chrome and Firefox manifests and fails on drift in:
 
 - Manifest V3 and background declarations;
-- exact permissions, HTTP(S) article access, and official structure hosts;
+- exact permissions and official structure-host access;
 - strict extension-page CSP;
 - icons and toolbar action;
 - Chromium `side_panel` versus Firefox `sidebar_action`;
 - configured minimum browser versions and Firefox metadata;
-- forbidden `<all_urls>` or optional permission declarations.
+- exact HTTP/HTTPS article host declarations and the structure-provider CSP
+  network allowlist, with no optional permission declarations;
 
 `scripts/chrome-smoke-client.mjs` connects to an already-open panel through Chrome DevTools Protocol. At a forced `320 × 700` viewport and DPR 2 it verifies that Mol* is absent before a load, then exercises a local CIF fixture, WebGL canvas creation, chain and sequence extraction, residue selection, reversible focus/hide-show/isolate controls, selected-residue representations, surface rendering, colouring, the PDBx/mmCIF download control, and an optional remote replacement. Real Chrome runs have passed for an extended PDB ID and for AlphaFold.
 
