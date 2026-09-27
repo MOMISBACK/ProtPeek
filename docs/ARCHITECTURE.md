@@ -229,7 +229,7 @@ molecule-only 512×512 source in Firefox canvas, derives the 128×128 store icon
 and manifest icon sizes, and verifies the PNG signatures and dimensions in
 Node.
 
-The resulting tracked files live in [`store-assets/`](./store-assets/). They
+The resulting tracked files live in [`store-assets/`](../store-assets/). They
 are real, reproducible browser captures of ProtPeek and Mol*; no generative AI
 is used to create them.
 

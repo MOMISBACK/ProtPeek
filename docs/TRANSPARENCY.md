@@ -99,8 +99,8 @@ npm run build:chrome
 npm run verify:build
 ```
 
-The published [640×400 store screenshot](./store-assets/protpeek-640x400.png)
-and [128×128 store icon](./store-assets/protpeek-icon-128.png) are real Firefox
+The published [640×400 store screenshot](../store-assets/protpeek-640x400.png)
+and [128×128 store icon](../store-assets/protpeek-icon-128.png) are real Firefox
 captures of ProtPeek rendering the public experimental structure
 [PDB 1AON](https://www.rcsb.org/structure/1AON). They contain no user content,
 and no generative AI was used to create them. After producing a Firefox archive,
@@ -109,5 +109,5 @@ signatures and exact dimensions.
 
 Any contribution adding a host, permission, transmission, persistent store,
 telemetry, or remote processing must be discussed first and update this file,
-`PRIVACY.md`, tests, and the generated-manifest verifier. It is not accepted
+`../PRIVACY.md`, tests, and the generated-manifest verifier. It is not accepted
 without explicit maintainer approval.

@@ -17,7 +17,7 @@ molecular processing, rendering, and interaction remain on the user's device.
 ProtPeek contacts only the official RCSB or AlphaFold structure services, and
 only after the user explicitly requests a remote identifier. Those requests
 download structure data, not executable code. See
-[TRANSPARENCY.md](./TRANSPARENCY.md) for the complete local/remote boundary.
+[docs/TRANSPARENCY.md](./docs/TRANSPARENCY.md) for the complete local/remote boundary.
 
 ## Data handled by ProtPeek
 
@@ -149,6 +149,6 @@ This policy should be updated whenever ProtPeek's permissions, providers, storag
 
 ProtPeek is distributed under the
 [Mozilla Public License 2.0](./LICENSE), with separate terms for the reserved
-name and brand assets in [TRADEMARKS.md](./TRADEMARKS.md). Contributions are
+name and brand assets in [docs/TRADEMARKS.md](./docs/TRADEMARKS.md). Contributions are
 open under [CONTRIBUTING.md](./CONTRIBUTING.md), but no contribution is merged
 without explicit approval from **MOMISBACK**.

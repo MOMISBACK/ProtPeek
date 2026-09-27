@@ -13,7 +13,7 @@ not licensed under the MPL-2.0. No permission is granted to use them as the
 name or branding of a fork, modified build, competing product, service, or
 browser-store listing.
 
-The reserved logo and icon files are listed in [NOTICE](./NOTICE).
+The reserved logo and icon files are listed in [NOTICE](../NOTICE).
 
 ## Forks and modified distributions
 

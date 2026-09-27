@@ -1,122 +1,80 @@
 # ProtPeek
 
-ProtPeek is a focused protein-structure viewer that lives in the browser side panel. It is designed for quickly moving from a scientific article to an interactive 3D structure without opening a full molecular-modelling application.
+**View protein structures without leaving the paper you're reading.**
 
-Version `0.1.2` provides one Manifest V3 codebase for Firefox and Chromium, a custom lightweight interface, and Mol* as the rendering engine.
+ProtPeek is a free, open-source browser extension for Firefox and Chromium. It scans the scientific article you are reading for structural identifiers and lets you open the corresponding protein structures directly in the browser side panel.
+
+ProtPeek is meant for **quick inspection while reading**, not as a replacement for PyMOL, ChimeraX, Coot, or other full molecular-modelling applications.
+
+[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
+
+![ProtPeek showing PDB 1AON](./store-assets/protpeek-640x400.png)
 
 ## What it does
 
-- Opens in Firefox's sidebar or Chromium's side panel.
-- Scans the active article locally for contextual PDB, UniProt, and AlphaFold references in text, official links, metadata, and JSON-LD.
-- Refreshes detections when the active tab changes, navigation completes, or article content is updated while the panel is open.
-- Accepts legacy and extended PDB IDs, UniProt accessions, and AlphaFold IDs.
-- Loads remote PDB structures as BinaryCIF with an mmCIF fallback.
-- Resolves UniProt and AlphaFold identifiers through AlphaFold DB.
-- Reads local `.cif`, `.mmcif`, `.bcif`, and `.pdb` files without uploading them.
-- Downloads the currently visible structure as a PDBx/mmCIF `.cif` file generated locally in the browser.
-- Exports the current customized view as a locally rendered high-resolution PNG, up to 2560 px on its long edge.
-- Shows chains, virtualized sequences, missing residues, and detected ligands.
-- Supports residue selection, reversible focus and isolation, direct chain visibility, selection colouring, and global or selected-residue representations, with visible active states.
-- Initializes Mol* in parallel with structure acquisition on the first explicit load, reuses that viewer, and cancels superseded loads.
-- Follows the operating-system light or dark theme.
+- Detects contextual **PDB, UniProt, and AlphaFold identifiers** in web articles.
+- Opens detected structures in the browser sidebar/side panel.
+- Loads PDB structures from **RCSB PDB** and predicted models from **AlphaFold DB**.
+- Supports local `.pdb`, `.cif`, `.mmcif`, and `.bcif` files.
+- Lets you inspect chains, sequences, residues, ligands, colours, and representations.
+- Supports focus, isolation, chain visibility, residue selection, and surface rendering.
+- Exports the visible structure as PDBx/mmCIF and the current view as a high-resolution PNG.
+- Runs without an account, analytics, advertising, or a ProtPeek backend.
+
+## How it works
+
+```text
+Scientific article
+      ↓
+local page scan
+      ↓
+PDB / UniProt / AlphaFold identifier
+      ↓
+RCSB PDB or AlphaFold DB
+      ↓
+Mol* viewer in the browser side panel
+```
+
+Article scanning happens locally. ProtPeek does not reconstruct structures from the paper: it detects identifiers already present on the page and retrieves the corresponding existing structure when you choose to open it.
 
 ## Supported input
 
-| Input | Examples | Behaviour |
+| Input | Example | Source |
 | --- | --- | --- |
-| PDB | `1ABC`, `8xyz` | RCSB BinaryCIF, then mmCIF fallback |
-| Extended PDB | `pdb_00001abc`, `pdb_1000axyz` | Future-proof PDBx/mmCIF identifier handling |
-| UniProt | `P69905` | Resolves the corresponding AlphaFold prediction |
-| AlphaFold | `AF-P69905-F1` | Selects the matching prediction from AlphaFold metadata |
-| Local | `.cif`, `.mmcif`, `.bcif`, `.pdb` | Parsed and rendered locally; 512 MiB safety limit |
-
-Remote structure payloads use the same 512 MiB safety ceiling.
-
-Residue expressions include `254`, `C254`, `A:254`, `A:C254`, `A:254,278,281`, and `A:254-281`. A chain must be specified when a chainless expression would be ambiguous.
+| PDB | `1ABC` | RCSB PDB |
+| Extended PDB | `pdb_00001abc` | RCSB PDB |
+| UniProt | `P69905` | AlphaFold DB |
+| AlphaFold | `AF-P69905-F1` | AlphaFold DB |
+| Local structure | `.pdb`, `.cif`, `.mmcif`, `.bcif` | Your device |
 
 ## Using ProtPeek
 
-1. Click the ProtPeek toolbar action while viewing an HTTP or HTTPS article. The current page is scanned automatically and the side panel opens on **Page**.
-2. Select a detected structure from **Page**. For a PDB, UniProt, or AlphaFold identifier—or a supported local file—switch to **Open**.
-3. Rotate, pan, and zoom in the viewer. Use the compact controls to inspect chains, ligands, sequences, and residue selections. Focus, Isolate, chain visibility, and selection colours expose their active state and can be toggled back; **Show all** restores the complete view.
-4. Use the download button above the viewer to save the currently visible structure as a locally generated PDBx/mmCIF `.cif` file. Hidden or isolated parts are omitted from that export. Use the camera button beside it to save the current view as a high-resolution PNG.
-5. Select an exact identifier in a web page and use **View in ProtPeek** from the context menu for a direct load.
+1. Open a scientific article and click the ProtPeek toolbar button.
+2. ProtPeek scans the active page locally and lists detected structures under **Page**.
+3. Select a structure to open it in the side panel.
+4. Rotate, zoom, inspect chains/residues/ligands, or customize the representation.
+5. You can also enter an identifier manually, load a local structure file, or select an identifier on a page and use **View in ProtPeek** from the context menu.
 
-ProtPeek requests access to HTTP and HTTPS pages so automatic detection keeps
-working when the active tab or page content changes. Access is used only for
-bounded local scans while the panel is open. A debounced page monitor sends
-only a change signal; it never transfers page content. ProtPeek installs no
-manifest-registered persistent content script and sends no article content to
-a server.
+## Privacy
 
-ProtPeek uses each browser's native sidebar/side-panel surface. Its left or
-right placement follows the browser-wide user preference and cannot be forced
-by an extension. Firefox exposes this under **Customize sidebar**; Chromium
-exposes it in the browser's appearance settings.
+ProtPeek has no analytics, ads, accounts, telemetry, or project-operated backend. Article scanning and local-file processing stay on your device.
+
+Remote requests are made only when you explicitly open a structure, and are limited to the official RCSB PDB and AlphaFold services.
+
+See [PRIVACY.md](./PRIVACY.md) and [docs/TRANSPARENCY.md](./docs/TRANSPARENCY.md) for details.
 
 ## Development
 
-Requirements:
-
-- Node.js 22 or newer
-- npm
-
-Install the locked dependencies:
+Requirements: Node.js 22+ and npm.
 
 ```sh
 npm ci
-```
-
-Start a development browser:
-
-```sh
 npm run dev:firefox
+# or
 npm run dev:chrome
 ```
 
-Create production builds:
-
-```sh
-npm run build:firefox
-npm run build:chrome
-```
-
-WXT writes the unpacked builds to `.output/firefox-mv3` and
-`.output/chrome-mv3`. The hidden `.output/` directory is generated locally,
-ignored by Git, and may be deleted and rebuilt at any time; it is a working
-directory, not the public release location.
-
-The `npm run release` pipeline creates the browser archives, makes a complete
-source archive from the clean Git `HEAD` (including the test suite), verifies
-the builds, and copies all three archives into the visible
-[`release/`](./release/) directory for inspection. These generated ZIP files
-are intentionally ignored by Git; official binaries and source archives are
-published on the matching GitHub Release. See
-[`release/README.md`](./release/README.md) for the expected filenames.
-
-### Scripts
-
-| Command | Purpose |
-| --- | --- |
-| `npm run dev:firefox` | Run WXT in Firefox development mode |
-| `npm run dev:chrome` | Run WXT in Chromium development mode |
-| `npm run build:firefox` | Build the Firefox MV3 extension |
-| `npm run build:chrome` | Build the Chromium MV3 extension |
-| `npm run verify:build` | Verify both built manifests, permissions, CSP, icons, and target-specific panel declarations |
-| `npm run zip:firefox` | Produce a Firefox submission archive with WXT |
-| `npm run zip:chrome` | Produce a Chromium submission archive with WXT |
-| `npm run release:sources` | Archive the exact clean Git `HEAD`, including tests, as the release sources |
-| `npm run release:copy` | Copy existing verified archives from `.output/` into visible `release/` |
-| `npm run release` | Build, verify, and copy the browser and source release archives |
-| `npm test` | Run the Vitest suite once |
-| `npm run test:watch` | Run Vitest in watch mode |
-| `npm run lint` | Run ESLint over the repository |
-| `npm run typecheck` | Run strict TypeScript checking without emitting files |
-| `npm run capture:store` | Capture and verify the real Firefox store screenshot and 1AON-derived icons |
-| `npm run benchmark` | Run deterministic Node CPU microbenchmarks; this is not a GPU benchmark |
-| `npm run prepare` | Generate WXT types and preparation artefacts |
-
-A useful pre-publication check is:
+Validate the project with:
 
 ```sh
 npm run typecheck
@@ -127,102 +85,24 @@ npm run build:chrome
 npm run verify:build
 ```
 
-`verify:build` reads the generated manifests, so both production builds must exist first.
-
-### Store assets
-
-The tracked [640×400 store screenshot](./store-assets/protpeek-640x400.png)
-and [128×128 store icon](./store-assets/protpeek-icon-128.png) are real
-captures of ProtPeek rendering the experimental GroEL–GroES–(ADP)7 complex
-[PDB 1AON](https://www.rcsb.org/structure/1AON). They are not mock-ups, and no
-generative AI was used to create them.
-
-After creating a Firefox archive, regenerate and dimension-check the assets
-with:
+Production archives can be generated with:
 
 ```sh
-npm run zip:firefox
-npm run capture:store
+npm run release
 ```
 
-The capture script temporarily installs the Firefox archive, loads 1AON
-through the normal ProtPeek interface, records the exact 640×400 viewport, and
-derives the molecule-only 128×128 icon locally. It requires Firefox and
-geckodriver; their paths can be supplied through `PROTPEEK_FIREFOX_BINARY` and
-`PROTPEEK_GECKODRIVER`.
+## Documentation
 
-### Chrome WebGL smoke harness
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Performance notes and measurements](./docs/PERFORMANCE.md)
+- [Privacy policy](./PRIVACY.md)
+- [Transparency and network boundary](./docs/TRANSPARENCY.md)
+- [Contributing](./CONTRIBUTING.md)
+- [Security](./SECURITY.md)
+- [Trademark policy](./docs/TRADEMARKS.md)
 
-The repository includes a real-browser CDP smoke client. After loading the built extension in a Chrome instance started with remote debugging, open the ProtPeek panel and run:
+## Licence
 
-```sh
-node scripts/chrome-smoke-client.mjs \
-  '<panel-CDP-websocket-url>' \
-  '/absolute/path/to/tests/fixtures/minimal.cif' \
-  'pdb_00001crn'
-```
+ProtPeek source code is distributed under the [Mozilla Public License 2.0](./LICENSE).
 
-The optional final argument exercises a remote replacement load; use `P69905` for the AlphaFold path. The harness verifies lazy Mol* startup, a narrow `320 × 700` layout, local CIF/WebGL loading, metadata, residue interaction, reversible focus/isolation and chain visibility, selected-residue representations, surface rendering, colouring, the local download control, and optional remote replacement. It is currently a manual Chrome smoke test rather than an npm script or a cross-browser E2E suite. The final headless Chrome 145 run passed functionally, but used SwiftShader and measured only 1.1 fps during synthetic rotation; this is below the intended interactive target and is not representative of hardware-GPU performance.
-
-## Architecture
-
-```text
-Article → bounded local scan → ArticleStructureScanner
-                                ↓ detected structure ID
-                              ProtPeekApp
-                              ├─ structure acquisition
-                              └─ lazy Mol* import and initialization
-                                ↓ both ready
-                              Mol* / WebGL
-  ↓ metadata and interaction events
-ProtPeek UI
-```
-
-Chromium and Firefox share the same background logic, side-panel document, UI, loaders, and viewer. The small `BrowserAdapter` boundary centralizes the `sidePanel`/`sidebarAction` difference. See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
-
-Measured CPU and integration results, their limits, and the still-missing release measurements are recorded in [PERFORMANCE.md](./PERFORMANCE.md).
-
-## Local execution and network access
-
-ProtPeek's engine and 100% of its executable code run locally in the browser.
-Every JavaScript module, including Mol*, is packaged with the extension;
-ProtPeek never downloads remote executable code or delegates processing to a
-project-operated backend.
-
-The only application network traffic is structure-data retrieval from the
-official RCSB or AlphaFold services, and it occurs only after the user
-explicitly requests a remote identifier. Scanning an article, opening a local
-file, parsing structures, rendering, and interacting with the viewer all run on
-the user's device. The complete boundary is documented in
-[TRANSPARENCY.md](./TRANSPARENCY.md).
-
-## Privacy and permissions
-
-ProtPeek has no analytics, advertising, user account, tracking endpoint, or ProtPeek-operated backend. Article scanning happens locally, and local structure files are never uploaded. Network requests are limited to the official RCSB and AlphaFold hosts required to retrieve a structure selected by the user.
-
-The store-facing policy is published at
-[momisback.github.io/ProtPeek/privacy/](https://momisback.github.io/ProtPeek/privacy/).
-See [PRIVACY.md](./PRIVACY.md) for the versioned policy, exact data flow, and
-an explanation of every permission.
-
-## Licence, contributions, and trademarks
-
-ProtPeek is distributed under the
-[Mozilla Public License 2.0](./LICENSE). Issues and pull requests are welcome;
-see [CONTRIBUTING.md](./CONTRIBUTING.md). Passing checks or opening a pull
-request does not grant merge authority: a contribution is merged only after
-explicit approval from **MOMISBACK**.
-
-The MPL-2.0 covers the code but does not grant rights to the reserved ProtPeek
-name, logo, or related brand assets. See [TRADEMARKS.md](./TRADEMARKS.md) before
-publishing a fork or modified distribution.
-
-## Known limitations
-
-- Bare UniProt-like tokens in ordinary prose are intentionally ignored unless an explicit database label, trusted metadata field, or official service URL establishes their meaning.
-- Scanning covers the main document only. Restricted browser pages, extension stores, and inaccessible frames cannot be scanned.
-- Detection is contextual but heuristic; candidates are confirmed only when a load succeeds.
-- The viewer displays one structure and the model/asymmetric unit at a time; biological-assembly selection is not yet exposed.
-- Gzipped local files and author insertion-code syntax in the text selection field are not yet supported.
-- Surface rendering is explicit and can still be expensive for very large structures.
-- Real Chrome and Firefox WebGL smoke runs pass, but remain manual. Chrome used SwiftShader, while Firefox's WebGL portion ran in the same extension page opened as a tab because WebDriver cannot enter the native remote sidebar document; automated cross-browser E2E and representative hardware-GPU measurements are not yet present.
+The viewer is powered by [Mol*](https://molstar.org/). Third-party components remain subject to their respective licences.

@@ -13,7 +13,7 @@ https://www.mozilla.org/MPL/2.0/
 
 The ProtPeek name, logo, and icons are governed separately by the ProtPeek
 Trademark Policy:
-https://github.com/MOMISBACK/ProtPeek/blob/v0.1.2/TRADEMARKS.md
+https://github.com/MOMISBACK/ProtPeek/blob/v0.1.2/docs/TRADEMARKS.md
 
 ProtPeek includes third-party software under its own licences. See
 THIRD_PARTY_NOTICES.txt in this package.
