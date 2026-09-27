@@ -48,7 +48,7 @@ For direct context-menu loads, an exact selected identifier is parsed locally an
 | `src/performance/` | Development-only timing records and animation-frame sampling |
 | `tests/` | Node-based Vitest unit tests for pure logic and loader behaviour |
 | `scripts/` | CPU microbenchmarks, generated-manifest verification, release/store-asset automation, and the Chrome CDP smoke client |
-| `../store-assets/` | Verified real-browser store screenshot, molecule source capture, and store icon |
+| `store-assets/` | Verified real-browser store screenshot, molecule source capture, and store icon |
 
 ## Cross-browser boundary
 
@@ -229,7 +229,7 @@ molecule-only 512×512 source in Firefox canvas, derives the 128×128 store icon
 and manifest icon sizes, and verifies the PNG signatures and dimensions in
 Node.
 
-The resulting tracked files live in [`../store-assets/`](./store-assets/). They
+The resulting tracked files live in [`store-assets/`](../store-assets/). They
 are real, reproducible browser captures of ProtPeek and Mol*; no generative AI
 is used to create them.
 
