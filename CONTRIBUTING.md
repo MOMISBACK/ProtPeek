@@ -55,5 +55,5 @@ Mozilla Public License 2.0 and confirm that you have the right to contribute
 it. Third-party code must be clearly identified and licence-compatible.
 
 The MPL-2.0 applies to code, not to the reserved ProtPeek name and logo. See
-[TRADEMARKS.md](./TRADEMARKS.md). A pull request does not authorise use of the
+[docs/TRADEMARKS.md](./docs/TRADEMARKS.md). A pull request does not authorise use of the
 ProtPeek brand for a fork or modified distribution.
