@@ -31,8 +31,6 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "capture:store": "node scripts/capture-store-assets.mjs",
-    "benchmark": "node --import=tsx scripts/benchmark.ts",
     "prepare": "wxt prepare"
   },
   "dependencies": {

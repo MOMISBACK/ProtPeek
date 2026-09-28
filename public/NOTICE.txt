@@ -1,19 +1,12 @@
-ProtPeek 0.1.2
+ProtPeek
 
 Copyright (c) 2026 MOMISBACK and individual ProtPeek contributors.
 
-Except for separately identified brand assets and third-party components,
-the ProtPeek source code is available under the Mozilla Public License 2.0.
-
-Corresponding source for this release:
-https://github.com/MOMISBACK/ProtPeek/tree/v0.1.2
-
-Licence:
+ProtPeek source code is available under the Mozilla Public License 2.0:
 https://www.mozilla.org/MPL/2.0/
 
-The ProtPeek name, logo, and icons are governed separately by the ProtPeek
-Trademark Policy:
-https://github.com/MOMISBACK/ProtPeek/blob/v0.1.2/docs/TRADEMARKS.md
+The MPL-2.0 licence does not grant rights to the ProtPeek name, logo, icons, or
+other trademarks and brand assets.
 
 ProtPeek includes third-party software under its own licences. See
 THIRD_PARTY_NOTICES.txt in this package.

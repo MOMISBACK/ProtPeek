@@ -24,8 +24,6 @@ export default defineConfig({
   zip: {
     dotSources: true,
     excludeSources: [
-      '.agents/**',
-      '.codex/**',
       '.git/**',
       '.wxt/**',
       '.DS_Store',
