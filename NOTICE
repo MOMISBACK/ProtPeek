@@ -1,22 +1,11 @@
 ProtPeek
 Copyright (c) 2026 MOMISBACK
 
-Except for the Brand Assets identified below and third-party components,
-the source code in this repository is made available under the Mozilla
-Public License, version 2.0. See LICENSE.
+ProtPeek source code is made available under the Mozilla Public License 2.0.
+See LICENSE.
 
-"ProtPeek", the ProtPeek name, logo, icons, and visual brand identity are
-Brand Assets. They are not licensed under the MPL-2.0. All rights in those
-Brand Assets are reserved by MOMISBACK. See docs/TRADEMARKS.md.
-
-Brand Asset files currently include:
-
-- public/icon-16.png
-- public/icon-32.png
-- public/icon-48.png
-- public/icon-96.png
-- public/icon-128.png
-- store-assets/protpeek-icon-128.png
+The MPL-2.0 licence does not grant rights to the ProtPeek name, logo, icons, or
+other trademarks and brand assets.
 
 Third-party components remain subject to their own licences and notices.
-See public/THIRD_PARTY_NOTICES.txt and the dependency metadata.
+See public/THIRD_PARTY_NOTICES.txt.

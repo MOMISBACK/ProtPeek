@@ -8,166 +8,92 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; style-src 'self'; img-src 'self' data:; script-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     >
-    <meta
-      name="description"
-      content="Privacy Policy for the ProtPeek browser extension."
-    >
+    <meta name="description" content="ProtPeek privacy policy.">
     <link rel="canonical" href="https://momisback.github.io/ProtPeek/privacy/">
     <link rel="stylesheet" href="../styles.css">
-    <title>Privacy Policy · ProtPeek</title>
+    <title>Privacy · ProtPeek</title>
   </head>
   <body>
     <header>
       <a class="brand" href="../">ProtPeek</a>
       <nav aria-label="Primary navigation">
-        <a aria-current="page" href="./">Privacy</a>
+        <a href="./">Privacy</a>
         <a href="https://github.com/MOMISBACK/ProtPeek">Source</a>
       </nav>
     </header>
     <main>
-      <h1>Privacy Policy</h1>
-      <p class="meta">Last updated: 27 September 2026 · Applies to ProtPeek 0.1.2</p>
+      <h1>Privacy policy</h1>
+      <p><strong>Last updated: 28 September 2026</strong></p>
 
-      <div class="callout">
-        ProtPeek has no user accounts, analytics, advertising, tracking,
-        telemetry, profiling, or ProtPeek-operated backend. It does not sell
-        personal data.
-      </div>
-
-      <h2>Local-first processing</h2>
       <p>
-        ProtPeek packages all executable code, including Mol*, with the
-        extension. Article scanning, identifier parsing, local-file reading,
-        molecular processing, rendering, selections, colours, and structure
-        export run on the user's device. ProtPeek never uploads local structure
-        files or downloads executable code at runtime.
+        ProtPeek does not operate a backend and does not include analytics,
+        advertising, telemetry, user accounts, or profiling.
       </p>
 
-      <h2>Article access</h2>
+      <h2>Article scanning</h2>
       <p>
-        ProtPeek has access to HTTP and HTTPS pages so detection can follow the
-        active tab while the panel is open. It locally inspects a bounded
-        snapshot of the main document's visible text, links, metadata, page
-        URL, and JSON-LD to detect contextual PDB, UniProt, and AlphaFold
-        references. Only compact
-        detection results return to the extension background; the page
-        snapshot is not sent to ProtPeek, RCSB, AlphaFold, or another server.
-      </p>
-      <p>
-        A bounded scan runs when the panel opens, the active tab changes,
-        navigation completes, article content changes, or the user presses the
-        rescan button. A debounced page monitor sends only a change signal, not
-        page content. Closing the panel removes the listener that turns those
-        signals into rescans.
+        While the ProtPeek panel is open, the extension can inspect the active
+        web page to detect PDB, UniProt, and AlphaFold identifiers. Detection is
+        performed locally. Page text and article content are not uploaded.
       </p>
 
-      <h2>Remote structure requests</h2>
+      <h2>Local structure files</h2>
       <p>
-        Loading a remote identifier necessarily sends that identifier to the
-        official structure provider selected by the request. Requests omit
-        extension-supplied credentials.
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Host</th>
-            <th scope="col">When contacted</th>
-            <th scope="col">Data sent</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th scope="row">models.rcsb.org</th>
-            <td>Explicit PDB load</td>
-            <td>PDB identifier in a BinaryCIF request path</td>
-          </tr>
-          <tr>
-            <th scope="row">files.rcsb.org</th>
-            <td>BinaryCIF fallback</td>
-            <td>PDB identifier in an mmCIF request path</td>
-          </tr>
-          <tr>
-            <th scope="row">alphafold.ebi.ac.uk</th>
-            <td>Explicit UniProt or AlphaFold load</td>
-            <td>Accession and official structure-file request</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>
-        Providers and network intermediaries may receive standard request data
-        such as the IP address, request time, user agent, and transport headers
-        under their own policies. ProtPeek does not receive a copy.
+        Local PDB, CIF, mmCIF, and BCIF files are read and rendered locally.
+        ProtPeek does not upload them. Structure and PNG exports are also
+        generated locally before the browser saves the file.
       </p>
 
-      <h2>Local files and downloads</h2>
+      <h2>Remote structures</h2>
       <p>
-        CIF, mmCIF, BinaryCIF, and PDB files chosen or dropped by the user are
-        read and rendered locally. The download control creates a local
-        PDBx/mmCIF file from the currently visible molecular structure. The
-        camera control renders the customized view as a high-resolution PNG.
-        Neither action sends the structure or image to a server.
+        When you explicitly open a remote identifier, ProtPeek contacts the
+        official RCSB PDB services for PDB structures or AlphaFold DB for
+        UniProt/AlphaFold models. The requested identifier is part of that
+        network request. The provider may also receive normal web-request
+        metadata such as your IP address, request time, user agent, and
+        transport headers.
       </p>
 
-      <h2>Storage and retention</h2>
+      <h2>Storage</h2>
       <p>
-        ProtPeek uses browser-managed session storage only to coordinate compact
-        page detections, the source tab identifier, an identifier selected for
-        loading, or a scan error between its background and side-panel
-        documents. Context-menu load values are removed after consumption, and
-        scan values are overwritten as the active context changes.
-      </p>
-      <p>
-        Structures, local-file contents, selections, and viewer state remain in
-        memory and are discarded when replaced or when the panel document is
-        destroyed. ProtPeek adds no application database. The browser's normal
-        HTTP cache may retain provider responses.
+        ProtPeek uses browser session storage only to coordinate the active page
+        and side panel. It may temporarily contain detected identifiers, a tab
+        ID, a pending context-menu identifier, and an optional scan error. It is
+        not used as a persistent history.
       </p>
 
       <h2>Permissions</h2>
-      <ul>
-        <li><strong>HTTP and HTTPS page access:</strong> bounded local scans while the panel is open.</li>
-        <li><strong>scripting:</strong> injection of the bounded scanner and local page-change monitor.</li>
-        <li><strong>contextMenus:</strong> explicit “View in ProtPeek” selection workflow.</li>
-        <li><strong>storage:</strong> session-scoped background/panel coordination.</li>
-        <li><strong>sidePanel:</strong> Chromium's native side-panel surface.</li>
-        <li><strong>CSP network allowlist:</strong> permits connections only to the official RCSB and AlphaFold hosts.</li>
-      </ul>
       <p>
-        ProtPeek does not request access to local files or browser-internal
-        pages, browsing history, cookies, identity, downloads, geolocation,
-        camera, or microphone.
+        HTTP/HTTPS page access and the scripting permission are used for local
+        article scanning. Context-menu access adds <strong>View in ProtPeek</strong>.
+        Storage is used for session-scoped communication between extension
+        components. Chromium side-panel support is generated by WXT.
+      </p>
+      <p>
+        ProtPeek restricts extension-initiated structure-data connections to
+        the official RCSB PDB and AlphaFold hosts.
+      </p>
+      <p>
+        Firefox classifies user-entered or selected structure identifiers under
+        its <code>searchTerms</code> data category because those identifiers can
+        be sent to the selected structure provider. ProtPeek does not use them
+        for analytics or profiling.
       </p>
 
-      <h2>Sharing, sale, and user control</h2>
+      <h2>Sharing and sale</h2>
       <p>
-        ProtPeek does not sell, rent, profile, or use data for advertising. The
-        only disclosure initiated by the extension is the provider request
-        required to retrieve a remote structure explicitly requested by the
-        user. Users can avoid remote requests by loading only local files, and
-        can cancel a load, replace a structure, close the panel, disable the
-        extension, or uninstall it at any time.
+        ProtPeek does not sell personal data and does not share data with
+        advertisers or analytics providers. Remote identifiers are disclosed
+        only to the structure provider needed to fulfil the user's request.
       </p>
 
-      <h2>This website</h2>
       <p>
-        This policy page contains no scripts, analytics, cookies, forms, or
-        remote assets. It is hosted by GitHub Pages; GitHub may process standard
-        web-server request data independently under GitHub's own policies.
-      </p>
-
-      <h2>Changes and contact</h2>
-      <p>
-        This policy will be updated if ProtPeek's permissions, providers,
-        storage, or data practices change. Privacy questions can be opened in
-        <a href="https://github.com/MOMISBACK/ProtPeek/issues">GitHub Issues</a>.
-        The repository contains the
-        <a href="https://github.com/MOMISBACK/ProtPeek/blob/main/PRIVACY.md">versioned policy</a>,
-        complete source, permission configuration, and transparency notes.
+        The complete source code is public on
+        <a href="https://github.com/MOMISBACK/ProtPeek">GitHub</a>.
       </p>
     </main>
     <footer>
-      ProtPeek source code is available under MPL-2.0. The ProtPeek name and
-      brand assets are reserved by MOMISBACK.
+      ProtPeek source code is available under MPL-2.0.
     </footer>
   </body>
 </html>
