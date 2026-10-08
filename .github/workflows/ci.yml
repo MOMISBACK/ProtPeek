@@ -31,3 +31,55 @@ jobs:
           name: protpeek-zotero
           path: release/protpeek-zotero-*.xpi
           if-no-files-found: error
+
+  release-zotero:
+    name: Publish Zotero release
+    if: >-
+      github.event_name == 'push' &&
+      (startsWith(github.ref, 'refs/tags/zotero-v') ||
+      (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-zotero]')))
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: protpeek-zotero
+          path: release
+      - name: Check release tag and package version
+        env:
+          RELEASE_REF: ${{ github.ref_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, zipfile
+          manifest = json.loads(pathlib.Path('zotero/manifest.json').read_text())
+          version = manifest['version']
+          tag = f'zotero-v{version}'
+          if os.environ['RELEASE_REF_TYPE'] == 'tag':
+              assert os.environ['RELEASE_REF'] == tag, 'Tag does not match Zotero version'
+          else:
+              assert os.environ['RELEASE_REF_TYPE'] == 'branch' and os.environ['RELEASE_REF'] == 'main', 'Release must use main or a matching tag'
+          archive = pathlib.Path('release') / f'protpeek-zotero-{version}.xpi'
+          with zipfile.ZipFile(archive) as package:
+              assert package.testzip() is None, 'Corrupt Zotero package'
+              assert json.loads(package.read('manifest.json')) == manifest, 'Packaged manifest differs from source'
+          with open(os.environ['GITHUB_ENV'], 'a') as environment:
+              environment.write(f'PLUGIN_VERSION={version}\nPLUGIN_TAG={tag}\n')
+          PY
+      - name: Publish verified XPI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag_options=(--verify-tag)
+          else
+            tag_options=(--target "$GITHUB_SHA")
+          fi
+          gh release create "$PLUGIN_TAG" "release/protpeek-zotero-${PLUGIN_VERSION}.xpi" \
+            --title "ProtPeek for Zotero ${PLUGIN_VERSION}" \
+            --notes-file zotero/RELEASE_NOTES.md \
+            --prerelease --latest=false "${tag_options[@]}"

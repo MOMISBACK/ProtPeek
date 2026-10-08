@@ -2,7 +2,7 @@
   "name": "protpeek",
   "version": "0.1.2",
   "private": true,
-  "description": "A local-first protein structure viewer for the browser side panel.",
+  "description": "A local-first protein structure viewer for browser side panels and Zotero desktop.",
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "zip:chrome": "wxt zip -b chrome",
     "release:sources": "node scripts/create-source-archive.mjs",
     "release:copy": "node scripts/copy-release-artifacts.mjs",
-    "release": "npm run zip:firefox && npm run zip:chrome && npm run release:sources && npm run verify:build && npm run release:copy",
+    "release": "npm run zip:firefox && npm run zip:chrome && npm run release:sources && npm run verify:build && npm run build:zotero && npm run verify:zotero && npm run release:copy",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
