@@ -5,6 +5,7 @@ import './style.css';
 import { ProtPeekApp } from '../ui/ProtPeekApp';
 import { initializeZoteroBrowser } from './browserShim';
 import type { ZoteroPanelBridge } from './types';
+import { initializeZoteroSelectMenus } from './selectMenus';
 
 interface PanelHostWindow extends Window { arguments?: [ZoteroPanelBridge]; }
 
@@ -16,6 +17,7 @@ if (bridge === undefined) {
 } else {
   const browser = initializeZoteroBrowser(bridge);
   const app = new ProtPeekApp(root);
+  const disposeSelectMenus = initializeZoteroSelectMenus(root);
   const context = document.querySelector<HTMLElement>('#document-title');
   if (context !== null) {
     context.textContent = bridge.title;
@@ -26,5 +28,7 @@ if (bridge === undefined) {
     const status = document.querySelector<HTMLElement>('.page-scan-status');
     if (status !== null) status.textContent = error instanceof Error ? error.message : 'This document could not be scanned.';
   });
-  window.addEventListener('pagehide', () => { app.dispose(); browser.dispose(); }, { once: true });
+  window.addEventListener('pagehide', () => {
+    disposeSelectMenus(); app.dispose(); browser.dispose();
+  }, { once: true });
 }

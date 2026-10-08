@@ -1,4 +1,15 @@
-# ProtPeek for Zotero 0.1.0
+# ProtPeek for Zotero 0.1.1
+
+Released on 8 October 2026.
+
+- Fix the representation, colour, and selected-residue menus in Zotero's viewer window. The Zotero integration now uses HTML popup controls rather than platform-native select popups.
+- Keep menu values synchronized with the visualizer, including rejected operations and programmatic resets. Disabled controls follow selection and isolation state.
+- Support keyboard selection and closing with Escape, Tab, or an outside click. Remove menu listeners and observers when the viewer closes.
+- Document saving the XPI from Firefox and replacing an installed 0.1.0 plugin.
+
+Download `protpeek-zotero-0.1.1.xpi` and install it through **Tools → Plugins → Install Plugin From File…**. Close and reopen the ProtPeek viewer after updating. The plugin remains a prototype; see [the validation report](https://github.com/MOMISBACK/ProtPeek/blob/zotero-v0.1.1/zotero/VALIDATION.md) for checks and platform limits.
+
+## 0.1.0
 
 First installable desktop prototype, released on 8 October 2026.
 

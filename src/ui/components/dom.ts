@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 type Child = Node | string | null | undefined;
 
+export const SELECT_VALUE_CHANGED = 'protpeek-select-value-changed';
+
 export function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   options: {

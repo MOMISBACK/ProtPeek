@@ -9,3 +9,34 @@ body { display: flex; flex-direction: column; }
 #document-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #app { flex: 1; min-height: 0; height: auto; }
 .protpeek-app { height: 100%; min-height: 0; }
+
+.zotero-select { position: relative; min-width: 0; }
+.zotero-select .zotero-select-trigger {
+  position: relative; width: 100%; max-width: none;
+  overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap;
+}
+.zotero-select-trigger::after {
+  content: ''; position: absolute; right: 9px; top: 11px;
+  width: 6px; height: 6px; border-right: 1.5px solid currentcolor;
+  border-bottom: 1.5px solid currentcolor; transform: rotate(45deg);
+}
+.zotero-select-trigger:disabled {
+  background: var(--surface-muted); color: var(--text-muted); opacity: 0.58;
+}
+.zotero-select-trigger[aria-expanded='true'] { border-color: var(--accent); }
+.zotero-select-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 50;
+  min-width: 100%; width: max-content; max-width: calc(100vw - 24px);
+  padding: 4px; border: 1px solid var(--border-strong); border-radius: 6px;
+  background: var(--surface); box-shadow: 0 5px 18px rgb(0 0 0 / 18%);
+}
+.zotero-select-option {
+  display: flex; align-items: center; gap: 5px; width: 100%;
+  min-height: 30px; padding: 5px 8px; border-radius: 3px;
+  background: transparent; color: var(--text); font: inherit; font-size: 12px;
+  text-align: left; white-space: nowrap;
+}
+.zotero-select-option::before { content: ''; width: 12px; flex: 0 0 12px; }
+.zotero-select-option[aria-selected='true']::before { content: '✓'; }
+.zotero-select-option:hover, .zotero-select-option.is-active { background: var(--accent-soft); }
+.zotero-select-option:disabled { opacity: 0.58; }

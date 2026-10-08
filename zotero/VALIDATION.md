@@ -1,16 +1,16 @@
 # Zotero prototype validation
 
-Version: 0.1.0. Verified on 8 October 2026.
+Version: 0.1.1. Verified on 8 October 2026.
 
 ## Automated checks
 
 - TypeScript type checking and ESLint passed.
-- All 30 Vitest suites passed: 308 tests, including attachment extraction, all-page PDF scanning, missing files, empty text, and pinned-document/race handling in the Zotero bridge.
+- All 31 Vitest suites passed: 315 tests, including attachment extraction, all-page PDF scanning, missing files, empty text, pinned-document/race handling, and the Zotero menu adapter's pointer, keyboard, reset, disabled-state, and cleanup behaviour.
 - Chrome and Firefox extension builds and `verify:build` passed.
 - `build:zotero` and `verify:zotero` passed. The XPI contains the bootstrap lifecycle hooks, valid Zotero manifest, local HTML and Mol* assets, locales, icons, and license notices; ZIP integrity and window XML were verified.
 - No npm dependencies were added.
 
-## Native Zotero check
+## Native Zotero integration check (0.1.0)
 
 The packaged XPI was installed using Zotero's actual AddonManager in Zotero **10.0.6 for Linux x86-64**, with a fresh isolated test profile, synthetic references, a seven-page PDF, and the existing `tests/fixtures/minimal.cif` structure. The desktop ran under Xvfb with software rendering. A temporary startup hook launched the test driver; it was not included in the plugin or committed to this repository.
 
@@ -28,6 +28,26 @@ The packaged XPI was installed using Zotero's actual AddonManager in Zotero **10
 
 Native verification exposed two integration issues that are fixed in this package: Firefox privileged windows supply a null `postMessage` source, so the Zotero entry point provides Mol*'s supported timer-based scheduler; and initial `about:blank` navigation must not release window/control tracking before the real document loads. Lifecycle tracking now checks the relevant document and removes its listeners on shutdown.
 
+## Native menu and upgrade check (0.1.1)
+
+The 0.1.1 XPI was tested in the same Zotero 10.0.6 Linux runtime with isolated profiles and the local mmCIF fixture. Pointer input used the desktop window's mouse-event API, rather than calling the menu handlers directly. The upgrade test first installed the exact published 0.1.0 release package and opened its viewer, then installed 0.1.1 through AddonManager.
+
+| Check | Result |
+| --- | --- |
+| Install 0.1.1 over the published 0.1.0 package | Passed; addon active at version 0.1.1 |
+| Upgrade closes the old viewer and loads the new controls | Passed |
+| Cartoon / Surface representation changes | Passed |
+| Chain / Uniform / Residue type colour changes | Passed |
+| Selected-residue Sticks / Ball & stick changes | Passed |
+| Selection styles disabled without a selection | Passed |
+| Isolation disables global menus; Show all restores them | Passed |
+| Outside pointer closes a menu | Passed |
+| Menus remain usable in a 380-pixel-wide viewer | Passed; layout inspected |
+| Viewer operations finish without JavaScript errors | Passed |
+| Disable closes the viewer and disposes its controls | Passed |
+
+Zotero's native select popups were unreliable in the privileged viewer iframe. Version 0.1.1 replaces those popups with HTML controls in Zotero while preserving the shared selects and their existing change handlers.
+
 ## Remaining verification boundaries
 
 - Windows, macOS, and Zotero 7, 8, and 9 have not been run here. The manifest targets their desktop APIs; that is not a platform test result.
@@ -35,4 +55,4 @@ Native verification exposed two integration issues that are fixed in this packag
 - Full text-selection interaction and native save/export dialogs were not automated.
 - OCR, EPUB, and password-protected PDF extraction are not verified features. Missing local files and empty extractable text have explicit fallback messages.
 
-This is an installable first prototype, with the above limits recorded for review.
+This is an installable prototype, with the above limits recorded for review.

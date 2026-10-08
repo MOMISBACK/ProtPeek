@@ -13,7 +13,7 @@ import type {
   StructureRepresentation,
   ViewerSelection,
 } from '../../viewer/StructureViewer';
-import { button, element, setHidden } from './dom';
+import { button, element, SELECT_VALUE_CHANGED, setHidden } from './dom';
 import { VirtualSequence } from './VirtualSequence';
 
 export interface StructurePanelCallbacks {
@@ -708,6 +708,7 @@ export class StructurePanel {
     for (const option of select.options) option.removeAttribute('selected');
     const selected = [...select.options].find((option) => option.value === value);
     if (selected !== undefined) selected.selected = true;
+    select.dispatchEvent(new Event(SELECT_VALUE_CHANGED));
   }
 
   #syncColorSwatches(): void {
