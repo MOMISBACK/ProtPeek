@@ -8,6 +8,8 @@ It is intended for quick inspection while reading, not as a replacement for PyMO
 
 [Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
 
+A desktop Zotero plugin is also available as a first prototype. See [installation and usage](./zotero/README.md).
+
 ![ProtPeek showing PDB 1AON](./store-assets/protpeek-640x400.png)
 
 ## Features
@@ -42,6 +44,8 @@ npm test
 npm run build:firefox
 npm run build:chrome
 npm run verify:build
+npm run build:zotero
+npm run verify:zotero
 ```
 
 Release archives:
@@ -56,6 +60,7 @@ Main source areas:
 - `src/structures/` — identifier parsing and structure loading
 - `src/viewer/` — Mol* integration
 - `src/ui/` — side-panel UI
+- `src/zotero/` and `zotero/` — desktop Zotero integration and plugin packaging
 - `tests/` — Vitest test suite
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution notes and [SECURITY.md](./SECURITY.md) for vulnerability reporting.
