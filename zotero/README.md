@@ -1,13 +1,15 @@
 # ProtPeek for Zotero
 
-A desktop Zotero plugin built from the same identifier scanner, loaders, UI, and Mol* viewer as the ProtPeek browser extension. This is the first prototype, version 0.1.0.
+A desktop Zotero plugin built from the same identifier scanner, loaders, UI, and Mol* viewer as the ProtPeek browser extension. Current prototype: version 0.1.1.
 
 ## Installation
 
-1. Download [protpeek-zotero-0.1.0.xpi](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.0/protpeek-zotero-0.1.0.xpi) from the [Zotero 0.1.0 release](https://github.com/MOMISBACK/ProtPeek/releases/tag/zotero-v0.1.0). The download is already an `.xpi`; do not unzip it.
+1. Download [protpeek-zotero-0.1.1.xpi](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.1/protpeek-zotero-0.1.1.xpi) from the [Zotero 0.1.1 release](https://github.com/MOMISBACK/ProtPeek/releases/tag/zotero-v0.1.1). In Firefox, **right-click → Save Link As…** to download the file rather than trying to install it as a Firefox extension. The download is already an `.xpi`; do not unzip it.
 2. In Zotero, open **Tools → Plugins**.
 3. Drag the `.xpi` into the Plugins window, or use **Install Plugin From File…** in its settings menu.
 4. Open a PDF and click **ProtPeek** in the reader toolbar. Alternatively, select a paper and use **Tools → ProtPeek — Protein structures** or the **ProtPeek** section of the item pane.
+
+To replace 0.1.0, install the new XPI through the same Plugins window. Close the old ProtPeek viewer before reopening it.
 
 The manifest targets the desktop Zotero 7–10 plugin APIs. The package is intended for Windows, macOS, and Linux; native-platform verification and any remaining limitations are recorded in [VALIDATION.md](./VALIDATION.md). It does not extend Zotero's website or mobile apps.
 
@@ -19,6 +21,7 @@ For development builds, each successful [CI run](https://github.com/MOMISBACK/Pr
 - Click a detected identifier to download and display its structure. Selecting an exact identifier in the PDF also offers an **Open … in ProtPeek** action.
 - **Open:** enter a PDB, UniProt, or AlphaFold identifier, or load a local `.pdb`, `.cif`, `.mmcif`, or `.bcif` file.
 - The original chain, sequence, residue, ligand, representation, colour, focus, and export tools remain available.
+- The structure-display menus support pointer clicks and keyboard selection: arrows navigate, Enter selects, and Escape closes a menu. Selected-residue styles become available after a chain, ligand, or residue selection; global display menus are disabled while a selection is isolated.
 
 The viewer opens in a non-modal window so the PDF remains visible. The document name at the top identifies the scanned attachment. Each viewer is pinned to that document; to switch papers, open ProtPeek from the other paper. The refresh button rescans the pinned document.
 
@@ -47,7 +50,7 @@ npm run build:zotero
 npm run verify:zotero
 ```
 
-Output: `release/protpeek-zotero-0.1.0.xpi`. The unpacked package is in `.output/zotero/`. No new npm dependencies were added.
+Output: `release/protpeek-zotero-0.1.1.xpi`. The unpacked package is in `.output/zotero/`. No new npm dependencies were added.
 
 The build aliases `wxt/browser` to an in-memory Zotero adapter for the shared UI. The plugin exposes a narrow read-only bridge instead of passing the Zotero object into the viewer. Lifecycle cleanup removes controls, unregisters reader hooks and the item-pane section, and closes viewer windows when disabled.
 
@@ -55,11 +58,11 @@ The Zotero entry point also provides a timer-based `setImmediate` implementation
 
 ## Publishing a Zotero release
 
-Update `zotero/manifest.json`, the download links, and [RELEASE_NOTES.md](./RELEASE_NOTES.md) for the new version, then merge the changes into `main`. Push a tag named `zotero-v<version>` at that commit. For version 0.1.0:
+Update `zotero/manifest.json`, the download links, and [RELEASE_NOTES.md](./RELEASE_NOTES.md) for the new version, then merge the changes into `main`. Push a tag named `zotero-v<version>` at that commit. For version 0.1.1:
 
 ```sh
-git tag zotero-v0.1.0
-git push origin zotero-v0.1.0
+git tag zotero-v0.1.1
+git push origin zotero-v0.1.1
 ```
 
 Alternatively, include `[release-zotero]` in the commit or merge message on `main`. CI then creates the matching release tag at that validated commit.
