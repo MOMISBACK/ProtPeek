@@ -1,6 +1,6 @@
 # Zotero prototype validation
 
-Version: 0.1.1. Verified on 8 October 2026.
+Version: 0.1.2. Verified on 8 October 2026.
 
 ## Automated checks
 
@@ -48,11 +48,15 @@ The 0.1.1 XPI was tested in the same Zotero 10.0.6 Linux runtime with isolated p
 
 Zotero's native select popups were unreliable in the privileged viewer iframe. Version 0.1.1 replaces those popups with HTML controls in Zotero while preserving the shared selects and their existing change handlers.
 
+## Native toolbar check (0.1.2)
+
+The 0.1.2 XPI was installed in a fresh isolated Zotero 10.0.6 Linux profile. After rendering the local mmCIF fixture, the structure-download and PNG-capture buttons were absent from the viewer DOM. Reset view remained visible and enabled, and completed successfully through pointer input. Representation, colour, selection, isolation/restoration, narrow-window, and disable-cleanup checks also passed without JavaScript errors.
+
 ## Remaining verification boundaries
 
 - Windows, macOS, and Zotero 7, 8, and 9 have not been run here. The manifest targets their desktop APIs; that is not a platform test result.
 - Native testing used a local structure. Remote RCSB/AlphaFold loads retain the existing browser loaders and their tests; a live provider download was not exercised in this native test.
-- Full text-selection interaction and native save/export dialogs were not automated.
+- Full text-selection interaction and native file-open dialogs were not automated.
 - OCR, EPUB, and password-protected PDF extraction are not verified features. Missing local files and empty extractable text have explicit fallback messages.
 
 This is an installable prototype, with the above limits recorded for review.

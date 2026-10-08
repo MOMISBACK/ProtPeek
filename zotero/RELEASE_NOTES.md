@@ -1,4 +1,13 @@
-# ProtPeek for Zotero 0.1.1
+# ProtPeek for Zotero 0.1.2
+
+Released on 8 October 2026.
+
+- Remove the structure-download and PNG-capture buttons from the Zotero viewer toolbar.
+- Keep Reset view and the structure-inspection controls available.
+
+Download `protpeek-zotero-0.1.2.xpi` and install it through **Tools → Plugins → Install Plugin From File…**. Close and reopen the ProtPeek viewer after updating. See [the validation report](https://github.com/MOMISBACK/ProtPeek/blob/zotero-v0.1.2/zotero/VALIDATION.md) for checks and platform limits.
+
+## 0.1.1
 
 Released on 8 October 2026.
 

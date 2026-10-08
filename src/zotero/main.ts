@@ -17,6 +17,7 @@ if (bridge === undefined) {
 } else {
   const browser = initializeZoteroBrowser(bridge);
   const app = new ProtPeekApp(root);
+  for (const action of root.querySelectorAll('.download-button, .image-button')) action.remove();
   const disposeSelectMenus = initializeZoteroSelectMenus(root);
   const context = document.querySelector<HTMLElement>('#document-title');
   if (context !== null) {
