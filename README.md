@@ -2,19 +2,19 @@
 
 **View protein structures without leaving the paper you're reading.**
 
-ProtPeek is a free, open-source browser extension for Firefox and Chromium. It detects structural identifiers in scientific articles and opens the corresponding structures in the browser side panel.
+ProtPeek is a free, open-source protein-structure viewer for Firefox, Chromium, and Zotero desktop. It detects structural identifiers in scientific articles and opens the corresponding structures in the browser side panel or a Zotero viewer window.
 
 It is intended for quick inspection while reading, not as a replacement for PyMOL, ChimeraX, Coot, or other full molecular-modelling tools.
 
-[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
+[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.0/protpeek-zotero-0.1.0.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
 
-A desktop Zotero plugin is also available as a first prototype. See [installation and usage](./zotero/README.md).
+The Zotero plugin is an installable first prototype (0.1.0). It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
 
 ![ProtPeek showing PDB 1AON](./store-assets/protpeek-640x400.png)
 
 ## Features
 
-- Detects PDB, UniProt, and AlphaFold identifiers in web articles.
+- Detects PDB, UniProt, and AlphaFold identifiers in web articles and Zotero attachments.
 - Loads structures from RCSB PDB and AlphaFold DB.
 - Opens local `.pdb`, `.cif`, `.mmcif`, and `.bcif` files.
 - Shows chains, sequences, residues, ligands, colours, and molecular representations.
@@ -22,7 +22,7 @@ A desktop Zotero plugin is also available as a first prototype. See [installatio
 - Exports the visible structure as PDBx/mmCIF and the current view as PNG.
 - No account, analytics, ads, telemetry, or ProtPeek-operated backend.
 
-Article scanning and local-file processing happen on the device. ProtPeek only contacts RCSB PDB or AlphaFold DB when you explicitly open a remote structure.
+Article scanning and local-file processing happen on the device. Structure downloads contact RCSB PDB or AlphaFold DB only when you explicitly open a remote structure. Zotero may also check GitHub-hosted plugin-update metadata; these checks do not include document content.
 
 ## Development
 
@@ -48,11 +48,13 @@ npm run build:zotero
 npm run verify:zotero
 ```
 
-Release archives:
+Release archives for the browsers and Zotero:
 
 ```sh
 npm run release
 ```
+
+For Zotero publication, see the [release instructions](./zotero/README.md#publishing-a-zotero-release). CI publishes the verified `.xpi` after an explicit release tag or release commit.
 
 Main source areas:
 
