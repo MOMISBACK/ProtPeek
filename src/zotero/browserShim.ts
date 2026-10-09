@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0
 import { loadStorageKey, scanStorageKey } from '../browser/sessionPayloads';
 import { parseSidePanelTabActivatedMessage } from '../browser/sidePanelSession';
+import { VIEWER_BACKGROUND_STORAGE_KEY } from '../ui/viewerBackgroundPreference';
+import type { ViewerBackground } from '../viewer/StructureViewer';
 import type { ZoteroPanelBridge } from './types';
 
 interface StorageChange { newValue?: unknown; }
 type StorageListener = (changes: Record<string, StorageChange>, areaName: string) => void;
 
-/** In-memory adapter for the existing UI; no WebExtension permissions/storage. */
+/** Document session state stays in memory; one UI preference uses Zotero.Prefs. */
 export function createZoteroBrowserShim(bridge: ZoteroPanelBridge) {
   const listeners = new Set<StorageListener>();
   const values: Record<string, unknown> = {};
@@ -16,6 +18,7 @@ export function createZoteroBrowserShim(bridge: ZoteroPanelBridge) {
   }
   let generation = 0;
   let disposed = false;
+  let background: ViewerBackground = 'white';
   const refresh = async (): Promise<{ refreshed: boolean }> => {
     if (disposed) return { refreshed: false };
     const request = ++generation;
@@ -41,6 +44,23 @@ export function createZoteroBrowserShim(bridge: ZoteroPanelBridge) {
       },
     },
     storage: {
+      local: {
+        get: (keys: string[]): Promise<Record<string, unknown>> => Promise.resolve().then(() => {
+          if (!keys.includes(VIEWER_BACKGROUND_STORAGE_KEY)) return {};
+          const stored = bridge.getViewerBackground?.();
+          if (stored === 'white' || stored === 'black') background = stored;
+          return { [VIEWER_BACKGROUND_STORAGE_KEY]: background };
+        }),
+        set: (preferences: Record<string, unknown>): Promise<void> => Promise.resolve().then(() => {
+          if (!(VIEWER_BACKGROUND_STORAGE_KEY in preferences)) return;
+          const next = preferences[VIEWER_BACKGROUND_STORAGE_KEY];
+          if (next !== 'white' && next !== 'black') {
+            throw new Error('Invalid viewer background preference.');
+          }
+          bridge.setViewerBackground?.(next);
+          background = next;
+        }),
+      },
       onChanged: {
         addListener: (listener: StorageListener): void => { listeners.add(listener); },
         removeListener: (listener: StorageListener): void => { listeners.delete(listener); },

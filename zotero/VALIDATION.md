@@ -1,11 +1,11 @@
 # Zotero prototype validation
 
-Version: 0.1.2. Verified on 8 October 2026.
+Version: 0.1.3. Verified on 9 October 2026.
 
 ## Automated checks
 
 - TypeScript type checking and ESLint passed.
-- All 31 Vitest suites passed: 315 tests, including attachment extraction, all-page PDF scanning, missing files, empty text, pinned-document/race handling, and the Zotero menu adapter's pointer, keyboard, reset, disabled-state, and cleanup behaviour.
+- All 33 Vitest suites passed: 380 tests, including the improved shared PDB scanner, attachment extraction, all-page PDF scanning, missing files, empty text, pinned-document/race handling, the Zotero menu adapter, and the persistent background preference's narrow bridge, malformed-value handling, and reopen behaviour.
 - Chrome and Firefox extension builds and `verify:build` passed.
 - `build:zotero` and `verify:zotero` passed. The XPI contains the bootstrap lifecycle hooks, valid Zotero manifest, local HTML and Mol* assets, locales, icons, and license notices; ZIP integrity and window XML were verified.
 - No npm dependencies were added.
@@ -51,6 +51,33 @@ Zotero's native select popups were unreliable in the privileged viewer iframe. V
 ## Native toolbar check (0.1.2)
 
 The 0.1.2 XPI was installed in a fresh isolated Zotero 10.0.6 Linux profile. After rendering the local mmCIF fixture, the structure-download and PNG-capture buttons were absent from the viewer DOM. Reset view remained visible and enabled, and completed successfully through pointer input. Representation, colour, selection, isolation/restoration, narrow-window, and disable-cleanup checks also passed without JavaScript errors.
+
+## Native viewer and preference check (0.1.3)
+
+The 0.1.3 XPI was tested in Zotero **10.0.6 Linux x86-64**, using an isolated
+profile, a synthetic local HTML attachment, and the local structure fixtures.
+All **59 checks passed**: 51 installation/upgrade/viewer checks and eight checks
+after restarting the same Zotero profile. Test instrumentation stayed outside
+the repository and plugin package.
+
+| Check | Result |
+| --- | --- |
+| AddonManager installs 0.1.3 over 0.1.2 and closes the old viewer | Passed |
+| Improved PDB wording and links in a local HTML attachment | Six expected identifiers detected |
+| Local structure loads and renders in Mol* | Passed |
+| White / Black choices change the actual WebGL canvas | Corner pixels verified as RGB 255/255/255 and 0/0/0 |
+| Reset and structure replacement preserve the background | Passed |
+| Closing/reopening the viewer preserves the background | Passed |
+| Restarting Zotero preserves the background | Passed in the same profile |
+| Interface switches between light/dark while the canvas stays black | Passed; interface pixels changed |
+| Menus and background controls at 380 and 300 px | Passed without horizontal document overflow |
+| Structure-download and PNG-capture buttons remain absent | Passed |
+| Disable removes the viewer, Tools menu, and plugin API | Passed |
+
+The background uses only `extensions.protpeek.viewerBackground` in local Zotero
+preferences. Unit tests also cover unset/malformed values and repair of a
+manually changed preference type. No new PDF-processing or automatic
+residue/mutation-detection feature is included.
 
 ## Remaining verification boundaries
 

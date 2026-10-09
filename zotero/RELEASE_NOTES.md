@@ -1,4 +1,23 @@
-# ProtPeek for Zotero 0.1.2
+# ProtPeek for Zotero 0.1.3
+
+Released on 9 October 2026.
+
+- Improve PDB detection for accession-number wording, suffix labels, annotated
+  lists, Oxford commas, and official structure URLs/DOIs.
+- Harmonize the viewer's typography, controls, and light/dark colours with the
+  browser extensions, including stronger small-text contrast.
+- Add White / Black background choices in Customize view, independent of the
+  interface theme. The choice is saved locally in Zotero preferences and survives
+  viewer reopening and Zotero restarts.
+- Keep structure-download and PNG-capture buttons omitted from Zotero.
+
+Download `protpeek-zotero-0.1.3.xpi` and install it through **Tools → Plugins →
+Install Plugin From File…**. Close and reopen the ProtPeek viewer after updating.
+No new PDF-processing or automatic residue/mutation-detection feature is added.
+See [the validation report](https://github.com/MOMISBACK/ProtPeek/blob/zotero-v0.1.3/zotero/VALIDATION.md)
+for checks and platform limits.
+
+## 0.1.2
 
 Released on 8 October 2026.
 
