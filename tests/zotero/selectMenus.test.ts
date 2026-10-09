@@ -106,6 +106,7 @@ describe('Zotero structure menus', () => {
     vi.stubGlobal('ResizeObserver', class { observe(): void {} disconnect(): void {} });
     const onRepresentation = vi.fn(async () => false);
     const panel = new StructurePanel({
+      onBackground: () => undefined,
       onChainVisible: async () => true,
       onColorMode: async () => true,
       onColorSelection: async () => true,

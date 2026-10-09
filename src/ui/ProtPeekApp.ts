@@ -29,10 +29,12 @@ import type {
   StructureRepresentation,
   StructureViewer,
   ViewerSelection,
+  ViewerBackground,
 } from '../viewer/StructureViewer';
 import { button, element, setHidden } from './components/dom';
 import { StructurePanel } from './components/StructurePanel';
 import { pageScanPresentation } from './pageScanPresentation';
+import { ViewerBackgroundPreference } from './viewerBackgroundPreference';
 
 type Loader = (signal: AbortSignal) => Promise<LoadedStructureData>;
 type PanelSection = 'open' | 'page';
@@ -140,12 +142,7 @@ export class ProtPeekApp {
   readonly #viewer: LazyStructureViewer;
   readonly #panel: StructurePanel;
   readonly #resizeObserver: ResizeObserver;
-  readonly #themeQuery = matchMedia('(prefers-color-scheme: dark)');
-  readonly #themeListener = ({ matches }: MediaQueryListEvent): void => {
-    void this.#viewer
-      .withViewer((viewer) => viewer.setTheme(matches))
-      .catch((error: unknown) => logger.warn('Theme update failed', error));
-  };
+  readonly #backgroundPreference: ViewerBackgroundPreference;
   #disposed = false;
   #activeArticleTabId: number | undefined;
   #activeIdentifierKey: string | undefined;
@@ -163,6 +160,7 @@ export class ProtPeekApp {
 
   constructor(root: HTMLElement) {
     this.#root = root;
+    this.#backgroundPreference = new ViewerBackgroundPreference(browser.storage.local);
     this.#viewer = new LazyStructureViewer(this.#viewerHost, {
       onContextLost: () => this.#showError('WebGL context was lost. Waiting for recovery…', false),
       onContextRestored: () => this.#clearError(),
@@ -175,6 +173,7 @@ export class ProtPeekApp {
       onSelection: (residue) => this.#panel.highlightResidue(residue),
     });
     this.#panel = new StructurePanel({
+      onBackground: (background) => this.#setBackground(background),
       onChainVisible: (chainId, visible) => this.#chainVisible(chainId, visible),
       onColorMode: (mode) => this.#colorMode(mode),
       onColorSelection: (color) => this.#colorSelection(color),
@@ -204,6 +203,12 @@ export class ProtPeekApp {
 
   async initialize(): Promise<void> {
     try {
+      const background = await this.#backgroundPreference.read();
+      if (!this.#disposed) this.#applyBackground(background);
+    } catch (error) {
+      logger.warn('Could not read the viewer background preference', error);
+    }
+    try {
       const currentWindow = await browser.windows.getCurrent();
       this.#windowId = currentWindow.id;
       if (this.#windowId === undefined) return;
@@ -232,7 +237,6 @@ export class ProtPeekApp {
     this.#viewer.dispose();
     this.#panel.dispose();
     this.#resizeObserver.disconnect();
-    this.#themeQuery.removeEventListener('change', this.#themeListener);
     if (this.#storageListener !== undefined) {
       browser.storage.onChanged.removeListener(this.#storageListener);
     }
@@ -517,8 +521,6 @@ export class ProtPeekApp {
       if (file !== undefined) void this.#loadFile(file);
     });
 
-    this.#themeQuery.addEventListener('change', this.#themeListener);
-
     this.#storageListener = (changes, areaName) => {
       if (areaName !== 'session' || this.#windowId === undefined) return;
       const scan = changes[scanStorageKey(this.#windowId)]?.newValue;
@@ -530,6 +532,19 @@ export class ProtPeekApp {
     };
     browser.storage.onChanged.addListener(this.#storageListener);
     window.addEventListener('pagehide', () => this.dispose(), { once: true });
+  }
+
+  #applyBackground(background: ViewerBackground): void {
+    this.#panel.setBackground(background);
+    this.#viewerHost.style.backgroundColor = background === 'black' ? '#000000' : '#ffffff';
+    void this.#viewer.setBackground(background)
+      .catch((error: unknown) => logger.warn('Could not update the viewer background', error));
+  }
+
+  #setBackground(background: ViewerBackground): void {
+    this.#applyBackground(background);
+    void this.#backgroundPreference.set(background)
+      .catch((error: unknown) => logger.warn('Could not save the viewer background preference', error));
   }
 
   async #refreshPageScan(): Promise<void> {

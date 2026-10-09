@@ -14,6 +14,8 @@ export type SelectionRepresentation =
 
 export type StructureColorMode = 'chain' | 'uniform' | 'residue-type';
 
+export type ViewerBackground = 'white' | 'black';
+
 export interface ResidueTarget {
   chainId?: string;
   insertionCode?: string;
@@ -70,6 +72,6 @@ export interface StructureViewer {
   setSelectionRepresentation(
     representation: SelectionRepresentation,
   ): Promise<void>;
-  setTheme(dark: boolean): void;
+  setBackground(background: ViewerBackground): void;
   showAll(): Promise<void>;
 }

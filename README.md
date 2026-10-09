@@ -19,6 +19,7 @@ The Zotero plugin is an installable prototype (0.1.2), with corrected structure-
 - Opens local `.pdb`, `.cif`, `.mmcif`, and `.bcif` files.
 - Shows chains, sequences, residues, ligands, colours, and molecular representations.
 - Supports residue selection, focus/isolation, chain visibility, and surface rendering.
+- Offers a white or black structure background, saved locally independently of the interface theme.
 - Exports the visible structure as PDBx/mmCIF and the current view as PNG.
 - No account, analytics, ads, telemetry, or ProtPeek-operated backend.
 
@@ -55,6 +56,11 @@ npm run release
 ```
 
 For Zotero publication, see the [release instructions](./zotero/README.md#publishing-a-zotero-release). CI publishes the verified `.xpi` after an explicit release tag or release commit.
+
+For browser publication, CI publishes the Chrome ZIP, Firefox ZIP, and matching
+source ZIP after a `browser-v<version>` tag or a main-branch commit containing
+`[release-browser]`. Upload the browser ZIPs to the respective stores; Firefox
+reviewers can rebuild the source ZIP with `npm ci` and `npm run zip:firefox`.
 
 Main source areas:
 

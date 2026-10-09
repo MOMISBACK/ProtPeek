@@ -21,9 +21,23 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - run: npm run build:firefox
-      - run: npm run build:chrome
+      - run: npm run zip:firefox
+      - run: npm run zip:chrome
       - run: npm run verify:build
+      - run: node scripts/check-browser-ui.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: protpeek-ui-check
+          path: .output/ui-check/
+          if-no-files-found: warn
+      - run: npm run release:sources
+      - run: npm run release:copy
+      - uses: actions/upload-artifact@v7
+        with:
+          name: protpeek-browsers
+          path: release/ProtPeek-*.zip
+          if-no-files-found: error
       - run: npm run build:zotero
       - run: npm run verify:zotero
       - uses: actions/upload-artifact@v7
@@ -31,6 +45,61 @@ jobs:
           name: protpeek-zotero
           path: release/protpeek-zotero-*.xpi
           if-no-files-found: error
+
+  release-browser:
+    name: Publish browser extension archives
+    if: >-
+      github.event_name == 'push' &&
+      (startsWith(github.ref, 'refs/tags/browser-v') ||
+      (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-browser]')))
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: protpeek-browsers
+          path: release
+      - name: Check release version and archives
+        env:
+          RELEASE_REF: ${{ github.ref_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, zipfile
+          version = json.loads(pathlib.Path('package.json').read_text())['version']
+          tag = f'browser-v{version}'
+          if os.environ['RELEASE_REF_TYPE'] == 'tag':
+              assert os.environ['RELEASE_REF'] == tag, 'Tag does not match extension version'
+          else:
+              assert os.environ['RELEASE_REF_TYPE'] == 'branch' and os.environ['RELEASE_REF'] == 'main', 'Release must use main or a matching tag'
+          for target in ['chrome', 'firefox', 'sources']:
+              archive = pathlib.Path('release') / f'ProtPeek-{version}-{target}.zip'
+              with zipfile.ZipFile(archive) as package:
+                  assert package.testzip() is None, f'Corrupt {target} archive'
+                  metadata = 'package.json' if target == 'sources' else 'manifest.json'
+                  assert json.loads(package.read(metadata))['version'] == version, f'{target} version differs from source'
+          with open(os.environ['GITHUB_ENV'], 'a') as environment:
+              environment.write(f'EXTENSION_VERSION={version}\nEXTENSION_TAG={tag}\n')
+          PY
+      - name: Publish verified browser archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag_options=(--verify-tag)
+          else
+            tag_options=(--target "$GITHUB_SHA")
+          fi
+          gh release create "$EXTENSION_TAG" \
+            "release/ProtPeek-${EXTENSION_VERSION}-chrome.zip" \
+            "release/ProtPeek-${EXTENSION_VERSION}-firefox.zip" \
+            "release/ProtPeek-${EXTENSION_VERSION}-sources.zip" \
+            --title "ProtPeek browser extensions ${EXTENSION_VERSION}" \
+            --notes-file RELEASE_NOTES.md --latest=false "${tag_options[@]}"
 
   release-zotero:
     name: Publish Zotero release

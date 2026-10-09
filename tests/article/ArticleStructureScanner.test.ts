@@ -24,10 +24,25 @@ describe('contextual PDB text detection', () => {
     ['PDB: 8XYZ', ['8xyz']],
     ['PDB ID 8XYZ', ['8xyz']],
     ['PDB accession 8XYZ', ['8xyz']],
+    ['PDB accession number: 1AON', ['1aon']],
+    ['PDB accession codes: 1AON and 1GRL', ['1aon', '1grl']],
+    ['PDB under accession code 1AON', ['1aon']],
+    ['PDB with accession code 1AON', ['1aon']],
+    ['wwPDB entry 1AON', ['1aon']],
     ['Protein Data Bank 8XYZ', ['8xyz']],
     ['RCSB PDB entry: 8xyz', ['8xyz']],
     ['PDBe code # 7ABC', ['7abc']],
     ['pdb IDs: 8XYZ, 8XYW and 7ABC', ['8xyz', '8xyw', '7abc']],
+    ['PDB entries 1AON, 1CRN, and 1GRL', ['1aon', '1crn', '1grl']],
+    ['PDB codes 1AON or 1GRL', ['1aon', '1grl']],
+    ['PDB entries 1AON (apo), 1CRN (ATP) and 1GRL (ADP)', ['1aon', '1crn', '1grl']],
+    ['PDB entries 1AON [apo], 1GRL [ATP]', ['1aon', '1grl']],
+    ['PDB IDs: (1AON), (1CRN), and (1GRL)', ['1aon', '1crn', '1grl']],
+    ['PDB entries are 1AON, pdb_1000axyz and 1GRL', ['1aon', 'pdb_1000axyz', '1grl']],
+    ['The structure 1AON (PDB) was used.', ['1aon']],
+    ['Structures 1AON, 1GRL (PDB IDs) were compared.', ['1aon', '1grl']],
+    ['Structures 1AON (apo), 1GRL (ATP) (PDB entries) were compared.', ['1aon', '1grl']],
+    ['Structure 1AON [Protein Data Bank] was used.', ['1aon']],
   ])('finds contextual IDs in %s', (text, expected) => {
     expect(
       detectPdbIdentifiersInText(text).map(
@@ -50,6 +65,10 @@ describe('contextual PDB text detection', () => {
     'The token prefix8XYZsuffix is unrelated.',
     'PDB proteins are discussed before unrelated sample 8XYZ.',
     'PDB database release notes from 2024.',
+    'PDB accession numbers were assigned to sample 1AON.',
+    'The unrelated sample prefix1AON (PDB) was recorded.',
+    'The unrelated sample 1AON_extra (PDB) was recorded.',
+    'PDB entries 1AONsuffix and 1GRL were recorded.',
     'notpdb_00001abc',
     'pdb_00001abc_extra',
     'pdb_00001ab!',
@@ -63,6 +82,27 @@ describe('contextual PDB text detection', () => {
     ).toEqual(['8xyz', 'pdb_1000axyz', '7abc']);
   });
 
+  it.each([
+    'PDB 1AON was compared with sample 1GRL.',
+    'PDB 1AON (apo) was compared with sample 1GRL.',
+    'PDB 1AON, unrelated sample 1GRL.',
+    'PDB 1AON. Sample 1GRL was measured separately.',
+    'PDB 1AON (a nested description (ATP)), 1GRL.',
+  ])('does not carry PDB context through arbitrary prose: %s', (text) => {
+    expect(ids({ text })).toEqual(['1aon']);
+  });
+
+  it('handles a long explicit ID list without truncating it after 128 characters', () => {
+    const values = Array.from({ length: 40 }, (_, index) =>
+      `1${index.toString(36).padStart(3, '0')}`,
+    );
+    expect(ids({ text: `PDB entries ${values.join(', ')}.` })).toEqual(values);
+  });
+
+  it('does not turn a token truncated by the scan bound into a valid ID', () => {
+    expect(ids({ text: `PDB${' '.repeat(1_020)}1AON_extra` })).toEqual([]);
+  });
+
   it('deduplicates case and equivalent extended legacy forms', () => {
     expect(
       ids({ text: 'PDB 1ABC, 1abc and pdb_00001abc; PDB: 1ABC.' }),
@@ -73,14 +113,23 @@ describe('contextual PDB text detection', () => {
 describe('trusted PDB links', () => {
   it.each([
     ['https://www.rcsb.org/structure/8XYZ', ['8xyz']],
+    ['https://www.rcsb.org/3d-view/1AON', ['1aon']],
     ['https://files.rcsb.org/download/8xyz.cif', ['8xyz']],
     ['https://www.ebi.ac.uk/pdbe/entry/pdb/7ABC', ['7abc']],
+    ['https://www.ebi.ac.uk/pdbe-srv/view/entry/1AON', ['1aon']],
     ['https://www.ebi.ac.uk/pdbe/entry-files/download/7abc.cif', ['7abc']],
     ['https://www.wwpdb.org/pdb?id=8xyz', ['8xyz']],
     [
       'https://files.wwpdb.org/pub/pdb/data/structures/divided/mmCIF/xy/8xyz.cif.gz',
       ['8xyz'],
     ],
+    [
+      'https://files.wwpdb.org/pub/pdb/data/structures/divided/pdb/ao/pdb1aon.ent.gz',
+      ['1aon'],
+    ],
+    ['https://doi.org/10.2210/pdb1aon/pdb', ['1aon']],
+    ['https://dx.doi.org/10.2210/PDB1AON/PDB', ['1aon']],
+    ['https://doi.org/10.2210/pdb_1000axyz/pdb', ['pdb_1000axyz']],
     ['https://models.rcsb.org/pdb_1000axyz.bcif', ['pdb_1000axyz']],
   ])('extracts official URL %s', (url, expected) => {
     expect(
@@ -94,6 +143,10 @@ describe('trusted PDB links', () => {
     'https://example.test/structure/8XYZ',
     'https://rcsb.org.evil.test/structure/8XYZ',
     'https://www.ebi.ac.uk/uniprot/8XYZ',
+    'https://www.ebi.ac.uk/pdbe-srv-unrelated/entry/1AON',
+    'https://doi.org.evil.test/10.2210/pdb1aon/pdb',
+    'https://doi.org/10.1000/pdb1aon/pdb',
+    'https://doi.org/10.2210/pdb1aon/unrelated',
     'not a URL containing 8XYZ',
   ])('ignores untrusted or irrelevant URL %s', (url) => {
     expect(detectPdbIdentifiersInUrl(url)).toEqual([]);
@@ -131,6 +184,44 @@ describe('trusted PDB links', () => {
         type: 'pdb',
       },
     ]);
+  });
+
+  it('finds printed official links and structure DOIs in article text', () => {
+    expect(ids({
+      text: 'See https://www.rcsb.org/3d-view/1AON. The second entry is ' +
+        '(https://www.ebi.ac.uk/pdbe-srv/view/entry/1GRL). ' +
+        'Also doi:10.2210/pdb1crn/pdb and ' +
+        'https://doi.org/10.2210/pdb_1000axyz/pdb.',
+    })).toEqual(['1aon', '1grl', '1crn', 'pdb_1000axyz']);
+  });
+
+  it('ignores printed URL IDs on untrusted destinations', () => {
+    expect(ids({
+      text: 'See https://rcsb.org.evil.test/structure/1AON and ' +
+        'https://example.test/structure/1GRL or 10.1000/pdb1crn/pdb.',
+    })).toEqual([]);
+  });
+
+  it.each([
+    'https://doi.org.evil.test/10.2210/pdb1aon/pdb',
+    'https://example.test/10.2210/pdb1aon/pdb',
+    'https://doi.org/10.2210/pdb1aon/pdb/unrelated',
+  ])('does not reinterpret an unrecognized URL as a standalone DOI: %s', (text) => {
+    expect(ids({ text })).toEqual([]);
+  });
+
+  it('collects text and link sources for the same structure DOI', () => {
+    const href = 'https://doi.org/10.2210/pdb1aon/pdb';
+    expect(new ArticleStructureScanner().scan({
+      text: `Data are deposited at ${href}.`,
+      links: [{ href }],
+    })).toEqual([{
+      id: '1aon',
+      displayId: '1AON',
+      format: 'legacy',
+      sources: ['text', 'link'],
+      type: 'pdb',
+    }]);
   });
 });
 
@@ -379,9 +470,19 @@ describe('trusted UniProt fields', () => {
 });
 
 describe('trusted compact values', () => {
+  it('rejects a long ID list followed by unrelated content', () => {
+    const values = Array.from({ length: 40 }, (_, index) =>
+      `1${index.toString(36).padStart(3, '0')}`,
+    );
+    expect(detectPdbIdentifiersInTrustedValue(
+      `${values.join(', ')}, unrelated content`,
+    )).toEqual([]);
+  });
+
   it.each([
     ['8XYZ', ['8xyz']],
     ['8XYZ / 7ABC', ['8xyz', '7abc']],
+    ['1AON, 1CRN, and 1GRL', ['1aon', '1crn', '1grl']],
     ['pdb_1000axyz; 8XYZ', ['pdb_1000axyz', '8xyz']],
   ])('parses the complete list %s', (value, expected) => {
     expect(

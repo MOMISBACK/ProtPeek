@@ -4,11 +4,61 @@ import { describe, expect, it, vi } from 'vitest';
 import { LazyStructureViewer } from '../../src/viewer/LazyStructureViewer';
 import type { StructureViewer } from '../../src/viewer/StructureViewer';
 
-function fakeViewer(dispose = vi.fn()): StructureViewer {
-  return { dispose } as unknown as StructureViewer;
+function fakeViewer(dispose = vi.fn(), setBackground = vi.fn()): StructureViewer {
+  return { dispose, setBackground } as unknown as StructureViewer;
 }
 
 describe('LazyStructureViewer', () => {
+  it('applies a saved background lazily and preserves it on loads and camera reset', async () => {
+    const setBackground = vi.fn();
+    const resetCamera = vi.fn();
+    const structureViewer = {
+      dispose: vi.fn(),
+      load: vi.fn(async () => ({ metadata: {}, timings: {} })),
+      resetCamera,
+      setBackground,
+    } as unknown as StructureViewer;
+    const createViewer = vi.fn(async () => structureViewer);
+    const viewer = new LazyStructureViewer({} as HTMLElement, {}, createViewer);
+
+    await viewer.setBackground('black');
+    expect(createViewer).not.toHaveBeenCalled();
+    await viewer.prepare();
+    expect(setBackground).toHaveBeenCalledWith('black');
+
+    const structure = {
+      data: 'data_empty',
+      format: 'mmcif' as const,
+      isBinary: false,
+      label: 'empty.cif',
+      source: { kind: 'local' as const, name: 'empty.cif' },
+    };
+    await viewer.load(structure);
+    await viewer.withViewer((current) => current.resetCamera());
+    await viewer.load(structure);
+    expect(setBackground).toHaveBeenCalledOnce();
+    expect(resetCamera).toHaveBeenCalledOnce();
+    await viewer.setBackground('white');
+    expect(setBackground).toHaveBeenLastCalledWith('white');
+  });
+
+  it('uses the newest background when creation is still pending', async () => {
+    const setBackground = vi.fn();
+    const structureViewer = fakeViewer(vi.fn(), setBackground);
+    let resolveViewer!: (viewer: StructureViewer) => void;
+    const viewer = new LazyStructureViewer({} as HTMLElement, {}, () =>
+      new Promise<StructureViewer>((resolve) => { resolveViewer = resolve; }),
+    );
+    const preparing = viewer.prepare();
+    await Promise.resolve();
+    const white = viewer.setBackground('white');
+    const black = viewer.setBackground('black');
+    resolveViewer(structureViewer);
+    await Promise.all([preparing, white, black]);
+    expect(setBackground).toHaveBeenCalledWith('black');
+    expect(setBackground).not.toHaveBeenCalledWith('white');
+  });
+
   it('prepares the viewer once across concurrent calls', async () => {
     const structureViewer = fakeViewer();
     const createViewer = vi.fn(async () => structureViewer);
