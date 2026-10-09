@@ -29,6 +29,7 @@ export default defineConfig({
       '.DS_Store',
       'coverage/**',
       'release/*.zip',
+      'release/*.xpi',
     ],
   },
   manifest: ({ browser }) => ({

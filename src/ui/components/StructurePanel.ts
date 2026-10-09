@@ -12,11 +12,13 @@ import type {
   StructureColorMode,
   StructureRepresentation,
   ViewerSelection,
+  ViewerBackground,
 } from '../../viewer/StructureViewer';
 import { button, element, SELECT_VALUE_CHANGED, setHidden } from './dom';
 import { VirtualSequence } from './VirtualSequence';
 
 export interface StructurePanelCallbacks {
+  onBackground: (background: ViewerBackground) => void;
   onChainVisible: (chainId: string, visible: boolean) => Promise<boolean>;
   onColorMode: (mode: StructureColorMode) => Promise<boolean>;
   onColorSelection: (color: number | null) => Promise<boolean>;
@@ -59,6 +61,7 @@ export class StructurePanel {
     className: 'customization-panel',
   });
   readonly #colorSwatches = new Map<number, HTMLButtonElement>();
+  readonly #backgroundChoices = new Map<ViewerBackground, HTMLButtonElement>();
   readonly #selectedLabel = element('span', {
     className: 'selected-label',
     text: 'No selection',
@@ -230,6 +233,12 @@ export class StructurePanel {
     this.#sequence.dispose();
   }
 
+  setBackground(background: ViewerBackground): void {
+    for (const [choice, control] of this.#backgroundChoices) {
+      control.setAttribute('aria-pressed', String(choice === background));
+    }
+  }
+
   #buildEntityStrip(): void {
     this.entityStrip.setAttribute('aria-label', 'Chains and ligands');
     this.entityStrip.append(this.#chainList, this.#ligandList);
@@ -316,6 +325,23 @@ export class StructurePanel {
     ]);
     modeControls.setAttribute('role', 'group');
     modeControls.setAttribute('aria-label', 'Structure display');
+
+    const backgroundControl = element('div', { className: 'view-background-control' }, [
+      element('span', { text: 'Background' }),
+    ]);
+    backgroundControl.setAttribute('role', 'group');
+    backgroundControl.setAttribute('aria-label', 'Viewer background');
+    for (const [background, label] of [['white', 'White'], ['black', 'Black']] as const) {
+      const choice = button(label, { className: 'view-background-choice' });
+      choice.setAttribute('data-background', background);
+      choice.addEventListener('click', () => {
+        this.setBackground(background);
+        this.#callbacks.onBackground(background);
+      });
+      this.#backgroundChoices.set(background, choice);
+      backgroundControl.append(choice);
+    }
+    this.setBackground('white');
 
     const selectionActions = element('div', { className: 'selection-actions' }, [
       this.#selectedLabel,
@@ -420,6 +446,7 @@ export class StructurePanel {
       this.entityStrip,
       element('div', { className: 'customization-tools' }, [
         controlBar,
+        backgroundControl,
         selectionEditor,
         this.#selectionError,
       ]),

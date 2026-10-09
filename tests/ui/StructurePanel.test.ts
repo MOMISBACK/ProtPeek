@@ -43,6 +43,7 @@ const SELECTED_RESIDUE = {
 
 function createCallbacks(): StructurePanelCallbacks {
   return {
+    onBackground: vi.fn(),
     onChainVisible: vi.fn(async () => true),
     onColorMode: vi.fn(async () => true),
     onColorSelection: vi.fn(async () => true),
@@ -88,6 +89,34 @@ describe('StructurePanel compact controls', () => {
   });
 
   afterEach(() => vi.unstubAllGlobals());
+
+  it('keeps the chosen background across structures, show all and view resets', () => {
+    const callbacks = createCallbacks();
+    const panel = new StructurePanel(callbacks);
+    panel.setMetadata(METADATA);
+    const white = buttonNamed(panel.inspector, 'White');
+    const black = buttonNamed(panel.inspector, 'Black');
+
+    expect(white.getAttribute('aria-pressed')).toBe('true');
+    expect(black.getAttribute('aria-pressed')).toBe('false');
+    black.click();
+    expect(callbacks.onBackground).toHaveBeenLastCalledWith('black');
+    expect(black.getAttribute('aria-pressed')).toBe('true');
+    expect(white.getAttribute('aria-pressed')).toBe('false');
+
+    panel.setModified(true);
+    buttonNamed(panel.inspector, 'Show all').click();
+    panel.resetViewState();
+    panel.clear();
+    panel.setMetadata({ ...METADATA, source: { kind: 'pdb', id: '1aon' } });
+    expect(black.getAttribute('aria-pressed')).toBe('true');
+    expect(callbacks.onBackground).toHaveBeenCalledOnce();
+
+    panel.setBackground('white');
+    expect(white.getAttribute('aria-pressed')).toBe('true');
+    expect(callbacks.onBackground).toHaveBeenCalledOnce();
+    panel.dispose();
+  });
 
   it('groups coherent controls and exposes every action reversibly', () => {
     const callbacks = createCallbacks();

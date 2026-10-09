@@ -33,6 +33,7 @@ import type {
   SelectionRepresentation,
   StructureViewer,
   ViewerEvents,
+  ViewerBackground,
   ViewerSelection,
 } from './StructureViewer';
 import {
@@ -70,9 +71,6 @@ function addSchemaItem(
 }
 
 function createSpec(pixelScale: number): PluginSpec {
-  const dark =
-    typeof matchMedia !== 'undefined' &&
-    matchMedia('(prefers-color-scheme: dark)').matches;
   return {
     actions: [],
     animations: [],
@@ -95,7 +93,7 @@ function createSpec(pixelScale: number): PluginSpec {
       multiSample: { mode: 'off' },
       postprocessing: { enabled: false },
       renderer: {
-        backgroundColor: Color(dark ? 0x151719 : 0xf7f8f9),
+        backgroundColor: Color(0xffffff),
         highlightColor: Color(0x4f8fc7),
         selectColor: Color(0xe28b3d),
       },
@@ -675,9 +673,9 @@ export class MolstarViewer implements StructureViewer {
     }
   }
 
-  setTheme(dark: boolean): void {
+  setBackground(background: ViewerBackground): void {
     this.#plugin.canvas3d?.setProps({
-      renderer: { backgroundColor: Color(dark ? 0x151719 : 0xf7f8f9) },
+      renderer: { backgroundColor: Color(background === 'black' ? 0x000000 : 0xffffff) },
     });
   }
 

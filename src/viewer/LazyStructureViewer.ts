@@ -3,7 +3,7 @@ import type {
   LoadedStructureData,
   ViewerLoadResult,
 } from '../structures/types';
-import type { StructureViewer, ViewerEvents } from './StructureViewer';
+import type { StructureViewer, ViewerBackground, ViewerEvents } from './StructureViewer';
 
 export type StructureViewerFactory = (
   container: HTMLElement,
@@ -19,6 +19,7 @@ export class LazyStructureViewer {
   readonly #container: HTMLElement;
   readonly #events: ViewerEvents;
   readonly #createViewer: StructureViewerFactory;
+  #background: ViewerBackground = 'white';
   #disposed = false;
   #viewerPromise: Promise<StructureViewer> | undefined;
 
@@ -47,6 +48,12 @@ export class LazyStructureViewer {
 
   async load(data: LoadedStructureData): Promise<ViewerLoadResult> {
     return (await this.#viewer()).load(data);
+  }
+
+  /** Keeps the preference without importing Mol* until a structure is opened. */
+  async setBackground(background: ViewerBackground): Promise<void> {
+    this.#background = background;
+    await this.withViewer((viewer) => viewer.setBackground(this.#background));
   }
 
   async withViewer(
@@ -89,6 +96,7 @@ export class LazyStructureViewer {
           viewer.dispose();
           throw new Error('Viewer has been disposed');
         }
+        viewer.setBackground(this.#background);
         return viewer;
       });
     this.#viewerPromise = viewerPromise;
