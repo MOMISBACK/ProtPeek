@@ -7,6 +7,7 @@ import { Buffer } from 'node:buffer';
 import { spawn } from 'node:child_process';
 import { access, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { extname, join, resolve, sep } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,6 +16,9 @@ import { URL } from 'node:url';
 const ROOT = resolve(import.meta.dirname, '..');
 const OUTPUT = join(ROOT, '.output/ui-check');
 const FIXTURE = join(ROOT, 'tests/fixtures/minimal.pdb');
+const GRO_FIXTURE = join(ROOT, 'tests/fixtures/minimal-two-frame.gro');
+const require = createRequire(import.meta.url);
+const { CIF } = require('molstar/lib/commonjs/mol-io/reader/cif.js');
 const report = {
   mode: 'Chromium rendering of HTTP-hosted builds with extension API stubs',
   checks: [],
@@ -49,6 +53,13 @@ const extensionStub = `(() => {
   HTMLAnchorElement.prototype.click = function () {
     if (this.download && this.href.startsWith('data:image/png')) {
       globalThis.__UI_CHECK_PNG__ = this.href;
+      return;
+    }
+    if (this.download && this.href.startsWith('blob:')) {
+      const filename = this.download;
+      globalThis.__UI_CHECK_STRUCTURE__ = fetch(this.href).then(async response => ({
+        filename, text: await response.text(),
+      }));
       return;
     }
     return originalClick.call(this);
@@ -184,7 +195,7 @@ async function openFixture(client, fixture = FIXTURE) {
   assert.equal(await client.evaluate(`document.querySelector('.error-box')?.hidden`), true, 'Viewer reported a load error');
 }
 
-async function checkPng(client, color, name) {
+async function checkPng(client, color, name, requireStructure = false) {
   await client.evaluate('delete globalThis.__UI_CHECK_PNG__');
   await click(client, '.image-button');
   await waitFor(client, 'typeof globalThis.__UI_CHECK_PNG__ === "string"', 'actual Mol* PNG export', 30_000);
@@ -197,15 +208,70 @@ async function checkPng(client, color, name) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(image, 0, 0);
     const points = [[0, 0], [image.width - 1, 0], [0, image.height - 1], [image.width - 1, image.height - 1]];
-    return { width: image.width, height: image.height, corners: points.map(([x, y]) => [...ctx.getImageData(x, y, 1, 1).data]), data: image.src };
+    const background = ${color === 'black' ? 0 : 255};
+    const pixels = ctx.getImageData(0, 0, image.width, image.height).data;
+    let foregroundPixels = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i + 3] > 0 && Math.max(
+        Math.abs(pixels[i] - background),
+        Math.abs(pixels[i + 1] - background),
+        Math.abs(pixels[i + 2] - background),
+      ) > 20) {
+        foregroundPixels++;
+      }
+    }
+    return { width: image.width, height: image.height, corners: points.map(([x, y]) => [...ctx.getImageData(x, y, 1, 1).data]), foregroundPixels, data: image.src };
   })()`);
   assert.ok(png.width > 0 && png.height > 0, 'PNG has invalid dimensions');
   for (const pixel of png.corners) {
     assert.deepEqual(pixel, [...Array(3).fill(color === 'black' ? 0 : 255), 255], `${name}: PNG background is not ${color}`);
   }
+  if (requireStructure) assert.ok(png.foregroundPixels > 100, `${name}: the exported view contains no visible structure`);
   await writeFile(join(OUTPUT, `${name}.png`), Buffer.from(png.data.split(',')[1], 'base64'));
-  report.checks.push({ name, width: png.width, height: png.height, corners: png.corners });
+  report.checks.push({ name, width: png.width, height: png.height, corners: png.corners, foregroundPixels: png.foregroundPixels });
   report.screenshots.push(`${name}.png`);
+}
+
+async function checkGro(client, target) {
+  await click(client, '#open-tab');
+  const formats = await client.evaluate(`({
+    accept: document.querySelector('input[type=file]').accept,
+    label: document.querySelector('.dropzone').textContent,
+  })`);
+  assert.ok(formats.accept.split(',').includes('.gro'), 'The local file picker must accept .gro');
+  assert.match(formats.label, /GRO/i, 'The supported-format label must mention GRO');
+  report.checks.push({ name: `${target}-gro-file-picker`, ...formats });
+
+  await openFixture(client, GRO_FIXTURE);
+  await waitFor(client, `[...document.querySelectorAll('.residue-code')].map(el => el.textContent).join('') === 'AGVK'`, 'GRO sequence');
+  const residues = await client.evaluate(`[...document.querySelectorAll('.residue-cell')].map(el => ({
+    code: el.querySelector('.residue-code').textContent,
+    number: el.querySelector('.residue-number').textContent,
+    title: el.title,
+    disabled: el.disabled,
+  }))`);
+  assert.deepEqual(residues.map(({ number }) => number), ['41', '42', '43', '44'], 'GRO author residue numbers changed');
+  assert.ok(residues.every(({ title, disabled }) => title.startsWith('Chain A') && !disabled), 'GRO observed residues must be selectable on the inferred chain');
+  report.checks.push({ name: `${target}-gro-sequence`, residues });
+  await checkPng(client, 'black', `${target}-gro-render`, true);
+
+  // Round-trip the actual loaded model through the browser's export control.
+  // This verifies nm -> Å and first-frame selection in the complete viewer path.
+  await client.evaluate('delete globalThis.__UI_CHECK_STRUCTURE__');
+  await click(client, '.download-button');
+  await waitFor(client, 'globalThis.__UI_CHECK_STRUCTURE__ !== undefined', 'GRO mmCIF export');
+  const exported = await client.evaluate('globalThis.__UI_CHECK_STRUCTURE__');
+  assert.match(exported.filename, /^minimal-two-frame\.cif$/, 'GRO export must use a normalized mmCIF filename');
+  const parsed = await CIF.parseText(exported.text).run();
+  assert.equal(parsed.isError, false, 'GRO export must be valid mmCIF');
+  const atoms = parsed.result.blocks[0]?.categories.atom_site;
+  assert.ok(atoms, 'GRO export has no atomic coordinates');
+  assert.equal(atoms.rowCount, 16, 'The viewer must export one frame, not merge both GRO frames');
+  const coordinates = ['Cartn_x', 'Cartn_y', 'Cartn_z'].map(field => atoms.getField(field).float(0));
+  assert.deepEqual(coordinates, [10, 20, 30], 'GRO coordinates must be in Å and come from the first frame');
+  report.checks.push({ name: `${target}-gro-export`, filename: exported.filename, atomCount: atoms.rowCount, firstAtomAngstrom: coordinates });
+  await writeFile(join(OUTPUT, `${target}-gro-export.cif`), exported.text);
+  await screenshot(client, `${target}-gro-viewer`);
 }
 
 async function setBackground(client, color) {
@@ -266,6 +332,7 @@ async function checkExtension(client, origin, target) {
   await reload(client);
   await openFixture(client);
   await checkPng(client, 'black', `${target}-export-after-panel-reopen`);
+  await checkGro(client, target);
 }
 
 async function checkDocs(client, origin) {

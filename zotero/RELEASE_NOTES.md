@@ -1,4 +1,19 @@
-# ProtPeek for Zotero 0.1.3
+# ProtPeek for Zotero 0.1.4
+
+Released on 9 October 2026.
+
+- Open local GROMACS `.gro` coordinate files through the Open tab or drag and drop.
+- Use Mol*'s bundled GRO reader, including conversion of nanometres to ångströms.
+- Display the first frame of a concatenated GRO file, with inferred chain IDs and
+  bonds. Trajectory playback, velocities, explicit topology, and triclinic box
+  geometry are outside this viewer's GRO support.
+
+Download `protpeek-zotero-0.1.4.xpi` and install it through **Tools → Plugins →
+Install Plugin From File…**. Close and reopen the ProtPeek viewer after updating.
+See [the validation report](https://github.com/MOMISBACK/ProtPeek/blob/zotero-v0.1.4/zotero/VALIDATION.md)
+for checks and platform limits.
+
+## 0.1.3
 
 Released on 9 October 2026.
 

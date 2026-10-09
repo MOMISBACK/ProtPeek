@@ -35,6 +35,13 @@ describe('structureExportFilename', () => {
     }))).toBe('My-protein.final.cif');
   });
 
+  it('exports a local GRO structure with a CIF extension', () => {
+    expect(structureExportFilename(loadedData({
+      format: 'gro',
+      source: { kind: 'local', name: 'simulation.GRO' },
+    }))).toBe('simulation.cif');
+  });
+
   it('removes paths, reserved characters, and bidi controls', () => {
     expect(structureExportFilename(loadedData({
       label: 'ignored',

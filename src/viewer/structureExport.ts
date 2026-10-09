@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import type { LoadedStructureData } from '../structures/types';
 
-const STRUCTURE_EXTENSION = /\.(?:bcif|cif|mmcif|pdb)$/iu;
+const STRUCTURE_EXTENSION = /\.(?:bcif|cif|mmcif|pdb|gro)$/iu;
 const RESERVED_WINDOWS_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/iu;
 const MAX_STEM_CODE_POINTS = 96;
 

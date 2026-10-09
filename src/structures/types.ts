@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-export type StructureFormat = 'mmcif' | 'pdb';
+export type StructureFormat = 'mmcif' | 'pdb' | 'gro';
 
 export type StructureSource =
   | { kind: 'local'; name: string }
