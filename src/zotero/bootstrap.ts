@@ -2,6 +2,8 @@
 import { identifierFromContextMenuSelection } from '../extension/contextMenuSelection';
 import { parseStructureIdentifier } from '../structures/identifiers';
 import { resolveArticleAttachment, scanZoteroArticle, isSupportedAttachment } from './article';
+import { createZoteroBackgroundPreference } from './viewerBackgroundPreference';
+import type { ZoteroPreferenceHost } from './viewerBackgroundPreference';
 import type { ZoteroArticleHost, ZoteroItem, ZoteroPanelBridge } from './types';
 
 interface ZoteroWindow extends Window {
@@ -22,6 +24,7 @@ interface PaneEvent {
   setEnabled(this: void, enabled: boolean): void;
 }
 interface ZoteroPluginHost extends ZoteroArticleHost {
+  Prefs: ZoteroPreferenceHost;
   initializationPromise: Promise<void>;
   getMainWindow(): ZoteroWindow | undefined;
   getMainWindows(): ZoteroWindow[];
@@ -98,9 +101,10 @@ async function open(itemId?: number, identifier?: string): Promise<Window | unde
     scan: () => attachment === undefined
       ? Promise.resolve({ tabId, title, error, structures: [] })
       : scanZoteroArticle(Zotero, attachment),
+    ...createZoteroBackgroundPreference(Zotero.Prefs),
   };
   // A non-modal native window keeps the PDF visible. The original ProtPeek UI
-  // and Mol* run in its local iframe, with only this read-only bridge.
+  // and Mol* run in its local iframe, with only this narrow bridge.
   const viewer = owner.openDialog(
     'chrome://protpeek/content/window.xhtml',
     '_blank',

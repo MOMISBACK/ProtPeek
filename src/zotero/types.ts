@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 import type { ScanPayload } from '../browser/sessionPayloads';
+import type { ViewerBackground } from '../viewer/StructureViewer';
 
 /** The small, read-only slice of Zotero used by ProtPeek. */
 export interface ZoteroItem {
@@ -26,10 +27,12 @@ export interface ZoteroScanResult extends ScanPayload {
   title: string;
 }
 
-/** No Zotero object or filesystem API is exposed to the viewer. */
+/** Only a document scan and the single viewer preference reach the viewer. */
 export interface ZoteroPanelBridge {
   itemId: number;
   title: string;
   initialIdentifier?: string;
   scan: () => Promise<ZoteroScanResult>;
+  getViewerBackground?: () => ViewerBackground;
+  setViewerBackground?: (background: ViewerBackground) => void;
 }

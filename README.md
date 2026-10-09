@@ -6,9 +6,9 @@ ProtPeek is a free, open-source protein-structure viewer for Firefox, Chromium, 
 
 It is intended for quick inspection while reading, not as a replacement for PyMOL, ChimeraX, Coot, or other full molecular-modelling tools.
 
-[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.2/protpeek-zotero-0.1.2.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
+[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.3/protpeek-zotero-0.1.3.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
 
-The Zotero plugin is an installable prototype (0.1.2), with corrected structure-display menus and a simplified viewer toolbar. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
+The Zotero plugin is an installable prototype (0.1.3), with improved PDB detection, harmonized typography, and a saved white/black viewer background. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
 
 ![ProtPeek showing PDB 1AON](./store-assets/protpeek-640x400.png)
 

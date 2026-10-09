@@ -8,6 +8,8 @@ ProtPeek does not operate a backend and does not include analytics, advertising,
 
 The Zotero prototype reads the selected paper's local attachment and limited reference metadata to detect identifiers on the computer. It does not upload document text, annotations, library records, or local structure files, and does not modify references or annotations.
 
+The Zotero viewer saves its white or black background choice in a namespaced local Zotero preference. This contains no article text or structure history. No preference or filesystem API is exposed to the viewer beyond reading and saving this display choice.
+
 Remote structures are fetched only after an explicit Open action, using the same providers described below. Zotero may independently contact `raw.githubusercontent.com` to check the plugin's update metadata. This prototype's update feed is empty and updates are manual. Update checks do not include paper content or library records. Zotero's own synchronization and other networking remain separate from ProtPeek.
 
 ## What ProtPeek processes
