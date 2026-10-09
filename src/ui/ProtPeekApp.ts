@@ -295,7 +295,7 @@ export class ProtPeekApp {
     });
 
     this.#fileInput.type = 'file';
-    this.#fileInput.accept = '.cif,.mmcif,.bcif,.pdb';
+    this.#fileInput.accept = '.cif,.mmcif,.bcif,.pdb,.gro';
     this.#dropZone.append(
       element('strong', {
         className: 'dropzone-title',
@@ -310,7 +310,7 @@ export class ProtPeekApp {
       ]),
       element('span', {
         className: 'dropzone-formats',
-        text: 'PDB · CIF · mmCIF · BCIF',
+        text: 'PDB · CIF · mmCIF · BCIF · GRO',
       }),
     );
     this.#openError.setAttribute('role', 'alert');

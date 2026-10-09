@@ -1,11 +1,11 @@
 # Zotero prototype validation
 
-Version: 0.1.3. Verified on 9 October 2026.
+Version: 0.1.4. Verified on 9 October 2026.
 
 ## Automated checks
 
 - TypeScript type checking and ESLint passed.
-- All 33 Vitest suites passed: 380 tests, including the improved shared PDB scanner, attachment extraction, all-page PDF scanning, missing files, empty text, pinned-document/race handling, the Zotero menu adapter, and the persistent background preference's narrow bridge, malformed-value handling, and reopen behaviour.
+- All 34 Vitest suites passed: 391 tests, including GRO coordinate conversion, concatenated frames, optional velocities, inferred chains, author residue numbering, and mmCIF export naming, plus including the improved shared PDB scanner, attachment extraction, all-page PDF scanning, missing files, empty text, pinned-document/race handling, the Zotero menu adapter, and the persistent background preference's narrow bridge, malformed-value handling, and reopen behaviour.
 - Chrome and Firefox extension builds and `verify:build` passed.
 - `build:zotero` and `verify:zotero` passed. The XPI contains the bootstrap lifecycle hooks, valid Zotero manifest, local HTML and Mol* assets, locales, icons, and license notices; ZIP integrity and window XML were verified.
 - No npm dependencies were added.
@@ -78,6 +78,25 @@ The background uses only `extensions.protpeek.viewerBackground` in local Zotero
 preferences. Unit tests also cover unset/malformed values and repair of a
 manually changed preference type. No new PDF-processing or automatic
 residue/mutation-detection feature is included.
+
+## Native GRO check (0.1.4)
+
+The 0.1.4 XPI was installed in Zotero **10.0.6 Linux x86-64**, using a fresh
+isolated profile and `tests/fixtures/minimal-two-frame.gro`. All **12 checks
+passed**, without viewer errors or unhandled promise rejections. The packaged
+viewer advertised and accepted GRO files, rendered visible molecular geometry
+on its real WebGL canvas, and exposed the observed sequence AGVK on inferred
+chain A with author residue numbers 41–44. Residue 42 could be selected. The
+Zotero structure-download and PNG-capture buttons remained absent. Test
+instrumentation stayed outside the repository and plugin package.
+
+Separate shared-model tests verify conversion from nanometres to ångströms,
+first-frame representation without merging concatenated frames, optional
+velocities, and chain inference from residue-number discontinuities. The
+browser rendering harness also checks the real GRO load and mmCIF export path.
+GRO has no chain identifiers or explicit bond topology; those are inferred.
+Trajectory playback, velocity display, explicit topology loading, and triclinic
+box reconstruction are outside this release's support.
 
 ## Remaining verification boundaries
 

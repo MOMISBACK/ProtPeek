@@ -3,7 +3,7 @@ import type { LoadedStructureData, StructureFormat } from '../types';
 import { StructureLoadError } from './errors';
 
 const MAX_LOCAL_FILE_BYTES = 512 * 1024 * 1024;
-const EXTENSION_PATTERN = /\.(bcif|cif|mmcif|pdb)$/i;
+const EXTENSION_PATTERN = /\.(bcif|cif|mmcif|pdb|gro)$/i;
 
 export function localFileFormat(name: string): {
   format: StructureFormat;
@@ -12,6 +12,7 @@ export function localFileFormat(name: string): {
   const extension = EXTENSION_PATTERN.exec(name)?.[1]?.toLowerCase();
   if (extension === undefined) return null;
   if (extension === 'pdb') return { format: 'pdb', isBinary: false };
+  if (extension === 'gro') return { format: 'gro', isBinary: false };
   return { format: 'mmcif', isBinary: extension === 'bcif' };
 }
 

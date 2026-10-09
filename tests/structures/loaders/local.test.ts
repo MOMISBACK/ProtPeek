@@ -21,6 +21,8 @@ describe('local structure loader', () => {
     ['model.mmcif', { format: 'mmcif', isBinary: false }],
     ['model.BCIF', { format: 'mmcif', isBinary: true }],
     ['model.PDB', { format: 'pdb', isBinary: false }],
+    ['model.gro', { format: 'gro', isBinary: false }],
+    ['simulation.GRO', { format: 'gro', isBinary: false }],
     ['complex.name.cif', { format: 'mmcif', isBinary: false }],
   ] as const)('recognizes %s', (name, expected) => {
     expect(localFileFormat(name)).toEqual(expected);
@@ -33,6 +35,8 @@ describe('local structure loader', () => {
     'model.cif.gz',
     'model.cif ',
     'model.bcif.tmp',
+    'model.gro.gz',
+    'model.gro.tmp',
   ])('rejects unsupported filename %s', (name) => {
     expect(localFileFormat(name)).toBeNull();
   });
@@ -70,6 +74,22 @@ describe('local structure loader', () => {
     );
 
     expect(result).toMatchObject({ data: 'ATOM', format: 'pdb', isBinary: false });
+  });
+
+  it('passes GRO text to its native parser without changing coordinate units', async () => {
+    const data = 'Protein\n1\n    1ALA     CA    1   0.100   0.200   0.300\n   1.0   1.0   1.0\n';
+    const result = await loadLocalStructure(
+      new File([data], 'protein.gro'),
+      new AbortController().signal,
+    );
+
+    expect(result).toEqual({
+      data,
+      format: 'gro',
+      isBinary: false,
+      label: 'protein.gro',
+      source: { kind: 'local', name: 'protein.gro' },
+    });
   });
 
   it('rejects unsupported input before attempting to read it', async () => {

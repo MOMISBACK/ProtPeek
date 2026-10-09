@@ -6,9 +6,9 @@ ProtPeek is a free, open-source protein-structure viewer for Firefox, Chromium, 
 
 It is intended for quick inspection while reading, not as a replacement for PyMOL, ChimeraX, Coot, or other full molecular-modelling tools.
 
-[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.3/protpeek-zotero-0.1.3.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
+[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.4/protpeek-zotero-0.1.4.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
 
-The Zotero plugin is an installable prototype (0.1.3), with improved PDB detection, harmonized typography, and a saved white/black viewer background. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
+The Zotero plugin is an installable prototype (0.1.4), with local GROMACS GRO support, improved PDB detection, harmonized typography, and a saved white/black viewer background. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
 
 ![ProtPeek showing PDB 1AON](./store-assets/protpeek-640x400.png)
 
@@ -16,7 +16,7 @@ The Zotero plugin is an installable prototype (0.1.3), with improved PDB detecti
 
 - Detects PDB, UniProt, and AlphaFold identifiers in web articles and Zotero attachments.
 - Loads structures from RCSB PDB and AlphaFold DB.
-- Opens local `.pdb`, `.cif`, `.mmcif`, and `.bcif` files.
+- Opens local `.pdb`, `.cif`, `.mmcif`, `.bcif`, and `.gro` files.
 - Shows chains, sequences, residues, ligands, colours, and molecular representations.
 - Supports residue selection, focus/isolation, chain visibility, and surface rendering.
 - Offers a white or black structure background, saved locally independently of the interface theme.
@@ -24,6 +24,14 @@ The Zotero plugin is an installable prototype (0.1.3), with improved PDB detecti
 - No account, analytics, ads, telemetry, or ProtPeek-operated backend.
 
 Article scanning and local-file processing happen on the device. Structure downloads contact RCSB PDB or AlphaFold DB only when you explicitly open a remote structure. Zotero may also check GitHub-hosted plugin-update metadata; these checks do not include document content.
+
+## GRO files
+
+Open or drop a local `.gro` file in the **Open** tab. Mol* converts its coordinates
+from nanometres to ångströms. A concatenated GRO file opens its first frame; there
+is no trajectory playback. GRO does not contain chain identifiers or explicit
+bond topology, so chains and bonds are inferred. Velocities are not displayed,
+and triclinic box geometry is not reconstructed.
 
 ## Development
 

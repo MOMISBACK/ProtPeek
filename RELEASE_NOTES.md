@@ -1,21 +1,20 @@
-# ProtPeek browser extensions 0.1.3
+# ProtPeek browser extensions 0.1.4
 
-- Improved PDB identifier detection in accession-number wording, suffix labels,
-  annotated lists, lists with an Oxford comma, and official structure links/DOIs.
-- Added White / Black background choices in Customize view. The choice is saved
-  on the device and is independent of the interface's light or dark theme.
-- Harmonized typography, text contrast, colours, and controls across the browser
-  panel and website.
+- Open local GROMACS `.gro` coordinate files from the Open tab or by drag and drop.
+- Use the bundled Mol* GRO reader, with coordinates converted from nanometres to
+  ångströms and chain identifiers and bonds inferred from the coordinate file.
+- Keep mmCIF export available for the loaded GRO structure.
 
-Article processing remains local. No additional network permissions or services
-are introduced. This release adds no browser PDF processing or automatic residue
-or mutation detection.
+A concatenated GRO file opens its first frame. This release does not add
+trajectory playback, velocity display, explicit topology, or triclinic box
+reconstruction. Local files stay on the device; no dependencies or permissions
+are added.
 
 ## Store submission
 
-- Chrome Web Store: `ProtPeek-0.1.3-chrome.zip`.
-- Firefox Add-ons: `ProtPeek-0.1.3-firefox.zip`.
-- Firefox reviewer sources: `ProtPeek-0.1.3-sources.zip`.
+- Chrome Web Store: `ProtPeek-0.1.4-chrome.zip`.
+- Firefox Add-ons: `ProtPeek-0.1.4-firefox.zip`.
+- Firefox reviewer sources: `ProtPeek-0.1.4-sources.zip`.
 
 Rebuild with Node.js 24 and npm: run `npm ci`, then `npm run zip:firefox` or
 `npm run zip:chrome`. Mol* and all executable extension code are bundled locally.
