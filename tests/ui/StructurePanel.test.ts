@@ -234,7 +234,7 @@ describe('StructurePanel compact controls', () => {
     focus.click();
     isolate.click();
     expect(callbacks.onIsolate).toHaveBeenCalledWith({
-      residues: [{ chainId: 'A', insertionCode: '', number: 5 }],
+      residues: [{ chainId: 'A', number: 5 }],
     });
     expect(isolate.getAttribute('aria-pressed')).toBe('true');
     expect(isolate.classList.contains('is-active')).toBe(true);
