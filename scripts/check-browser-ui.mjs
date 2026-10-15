@@ -204,10 +204,15 @@ async function openFixture(client, fixture = FIXTURE) {
 }
 
 async function checkPng(client, color, name, requireStructure = false) {
-  await client.evaluate('delete globalThis.__UI_CHECK_PNG__');
-  await click(client, '.image-button');
-  await waitFor(client, 'typeof globalThis.__UI_CHECK_PNG__ === "string"', 'actual Mol* PNG export', 30_000);
-  const png = await client.evaluate(`(async () => {
+  // The residue list can become available before Mol* has drawn the geometry.
+  // Poll actual exported pixels rather than treating a transient blank frame as final.
+  let png;
+  for (let attempt = 0; attempt < (requireStructure ? 12 : 1); attempt++) {
+    await settled(client);
+    await client.evaluate('delete globalThis.__UI_CHECK_PNG__');
+    await click(client, '.image-button');
+    await waitFor(client, 'typeof globalThis.__UI_CHECK_PNG__ === "string"', 'actual Mol* PNG export', 30_000);
+    png = await client.evaluate(`(async () => {
     const image = new Image();
     image.src = globalThis.__UI_CHECK_PNG__;
     await image.decode();
@@ -229,7 +234,10 @@ async function checkPng(client, color, name, requireStructure = false) {
       }
     }
     return { width: image.width, height: image.height, corners: points.map(([x, y]) => [...ctx.getImageData(x, y, 1, 1).data]), foregroundPixels, data: image.src };
-  })()`);
+    })()`);
+    if (!requireStructure || png.foregroundPixels > 100) break;
+    await delay(250);
+  }
   assert.ok(png.width > 0 && png.height > 0, 'PNG has invalid dimensions');
   for (const pixel of png.corners) {
     assert.deepEqual(pixel, [...Array(3).fill(color === 'black' ? 0 : 255), 255], `${name}: PNG background is not ${color}`);
