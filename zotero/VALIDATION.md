@@ -1,6 +1,6 @@
 # Zotero prototype validation
 
-Version: 0.1.4. Verified on 9 October 2026.
+Version: 0.1.5. Verified on 9 October 2026.
 
 ## Automated checks
 
@@ -79,9 +79,9 @@ preferences. Unit tests also cover unset/malformed values and repair of a
 manually changed preference type. No new PDF-processing or automatic
 residue/mutation-detection feature is included.
 
-## Native GRO check (0.1.4)
+## Native GRO check (0.1.5)
 
-The 0.1.4 XPI was installed in Zotero **10.0.6 Linux x86-64**, using a fresh
+The 0.1.5 XPI was installed in Zotero **10.0.6 Linux x86-64**, using a fresh
 isolated profile and `tests/fixtures/minimal-two-frame.gro`. All **12 checks
 passed**, without viewer errors or unhandled promise rejections. The packaged
 viewer advertised and accepted GRO files, rendered visible molecular geometry
