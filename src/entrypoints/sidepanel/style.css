@@ -1124,12 +1124,47 @@ summary {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Reserve the label's real intrinsic width: a 54px column cropped
+     "RESIDUES" underneath the text input on narrow side panels. */
   .selection-editor {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 6px;
   }
 
-  .selection-representation {
-    max-width: 100%;
+  .selection-editor .section-label {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .selection-editor .selection-input {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+
+  .selection-editor .primary-small {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .selection-editor .selection-representation {
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+    max-width: none;
+    flex: none;
+  }
+
+  .selection-editor .selection-palette {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    padding-left: 0;
   }
 
   .structure-modes,
@@ -1137,16 +1172,8 @@ summary {
     width: 100%;
   }
 
-  .selection-editor .section-label {
-    width: 54px;
-  }
-
-  .selection-input {
-    flex-basis: calc(100% - 59px);
-  }
-
   .field-error {
-    margin-left: 59px;
+    margin-left: 0;
   }
 }
 
