@@ -2,6 +2,7 @@
 export interface ResidueReference {
   readonly number: number;
   readonly residueCode?: string;
+  readonly insertionCode?: string;
 }
 
 interface ResidueSelectionTermBase {
@@ -42,7 +43,8 @@ export class ResidueSelectionParseError extends Error {
 }
 
 const CHAIN_PATTERN = /^[a-z0-9][a-z0-9_.-]*$/i;
-const RESIDUE_EXPRESSION_PATTERN = /^([a-z]?)\s*(-?[0-9]+)(?:\s*-\s*([a-z]?)\s*(-?[0-9]+))?$/i;
+// A leading letter is an amino-acid code; a trailing letter is the PDB insertion code.
+const RESIDUE_EXPRESSION_PATTERN = /^([a-z]?)\s*(-?[0-9]+)([a-z]?)(?:\s*-\s*([a-z]?)\s*(-?[0-9]+)([a-z]?))?$/i;
 
 function parseSafeInteger(
   value: string,
@@ -62,10 +64,13 @@ function parseSafeInteger(
 function reference(
   number: number,
   residueCode: string | undefined,
+  insertionCode: string | undefined,
 ): ResidueReference {
-  return residueCode === undefined || residueCode.length === 0
-    ? { number }
-    : { number, residueCode: residueCode.toUpperCase() };
+  return {
+    number,
+    ...(residueCode ? { residueCode: residueCode.toUpperCase() } : {}),
+    ...(insertionCode ? { insertionCode: insertionCode.toUpperCase() } : {}),
+  };
 }
 
 function withOptionalChain<T extends { readonly kind: string }>(
@@ -91,8 +96,10 @@ function parseExpression(
 
   const startCode = match[1];
   const startValue = match[2];
-  const endCode = match[3];
-  const endValue = match[4];
+  const startInsertion = match[3];
+  const endCode = match[4];
+  const endValue = match[5];
+  const endInsertion = match[6];
   if (startValue === undefined) {
     throw new ResidueSelectionParseError(
       'invalid-residue',
@@ -102,13 +109,15 @@ function parseExpression(
   }
 
   const startNumber = parseSafeInteger(startValue, termIndex);
-  const start = reference(startNumber, startCode);
+  const start = reference(startNumber, startCode, startInsertion);
   if (endValue === undefined) {
     return withOptionalChain({ kind: 'residue', residue: start }, chainId);
   }
 
   const endNumber = parseSafeInteger(endValue, termIndex);
-  if (endNumber < startNumber) {
+  if (endNumber < startNumber ||
+    (endNumber === startNumber &&
+      (endInsertion ?? '') < (startInsertion ?? ''))) {
     throw new ResidueSelectionParseError(
       'descending-range',
       termIndex,
@@ -120,7 +129,7 @@ function parseExpression(
     {
       kind: 'range',
       start,
-      end: reference(endNumber, endCode),
+      end: reference(endNumber, endCode, endInsertion),
     },
     chainId,
   );
