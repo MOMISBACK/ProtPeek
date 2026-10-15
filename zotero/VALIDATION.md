@@ -1,6 +1,16 @@
 # Zotero prototype validation
 
-Version: 0.1.5. Verified on 9 October 2026.
+Historical native-check baseline: 0.1.4, verified on 9 October 2026.
+
+## Version 0.1.5 shared selection changes
+
+The 0.1.5 Zotero XPI bundles the same sequence/selection UI as Chrome and Firefox.
+Unit tests cover sequence clicks, Ctrl/Cmd toggles, Shift ranges, editable text
+commit, 3D picks, insertion-coded author numbering and failure handling. The CI
+also checks that the Zotero XPI builds and passes package verification. This is
+**not** a claim of native Zotero 0.1.5 testing: the native results below refer to
+the earlier versions stated in their headings.
+
 
 ## Automated checks
 
@@ -79,9 +89,9 @@ preferences. Unit tests also cover unset/malformed values and repair of a
 manually changed preference type. No new PDF-processing or automatic
 residue/mutation-detection feature is included.
 
-## Native GRO check (0.1.5)
+## Native GRO check (0.1.4)
 
-The 0.1.5 XPI was installed in Zotero **10.0.6 Linux x86-64**, using a fresh
+The 0.1.4 XPI was installed in Zotero **10.0.6 Linux x86-64**, using a fresh
 isolated profile and `tests/fixtures/minimal-two-frame.gro`. All **12 checks
 passed**, without viewer errors or unhandled promise rejections. The packaged
 viewer advertised and accepted GRO files, rendered visible molecular geometry
