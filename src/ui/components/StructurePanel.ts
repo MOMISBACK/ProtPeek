@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import { parseResidueSelection } from '../../sequence/residueSelectionParser';
+import { formatResidueSelection, residueTargetKey } from '../../sequence/formatResidueSelection';
+import type { ResolvedResidueTarget } from '../../sequence/resolveResidueSelection';
 import { resolveResidueSelection } from '../../sequence/resolveResidueSelection';
 import type {
   ChainInfo,
@@ -16,6 +18,7 @@ import type {
 } from '../../viewer/StructureViewer';
 import { button, element, SELECT_VALUE_CHANGED, setHidden } from './dom';
 import { VirtualSequence } from './VirtualSequence';
+import type { SequenceClickModifiers } from './VirtualSequence';
 
 export interface StructurePanelCallbacks {
   onBackground: (background: ViewerBackground) => void;
@@ -42,7 +45,7 @@ export class StructurePanel {
   readonly #chainList = element('div', { className: 'entity-group chain-list' });
   readonly #ligandList = element('div', { className: 'entity-group ligand-list' });
   readonly #sequence = new VirtualSequence({
-    onResidueClick: (residue) => this.#selectResidue(residue),
+    onResidueClick: (residue, modifiers) => this.#selectResidue(residue, modifiers),
   });
   readonly #sequenceTitle = element('h2', {
     className: 'section-label',
@@ -62,10 +65,6 @@ export class StructurePanel {
   });
   readonly #colorSwatches = new Map<number, HTMLButtonElement>();
   readonly #backgroundChoices = new Map<ViewerBackground, HTMLButtonElement>();
-  readonly #selectedLabel = element('span', {
-    className: 'selected-label',
-    text: 'No selection',
-  });
   readonly #focusButton = button('Focus', { className: 'text-button' });
   readonly #isolateButton = button('Isolate', { className: 'text-button' });
   readonly #showAllButton = button('Show all', { className: 'text-button' });
@@ -84,6 +83,7 @@ export class StructurePanel {
   #selectionRepresentationRequest = 0;
   #colorModeRequest = 0;
   #selection: ViewerSelection = {};
+  #sequenceAnchor: ResolvedResidueTarget | null = null;
 
   constructor(callbacks: StructurePanelCallbacks) {
     this.#callbacks = callbacks;
@@ -95,7 +95,6 @@ export class StructurePanel {
     this.#selectionInput.setAttribute('aria-describedby', 'selection-error');
     this.#selectionError.id = 'selection-error';
     this.#selectionError.setAttribute('aria-live', 'polite');
-    this.#selectedLabel.setAttribute('aria-live', 'polite');
 
     this.#buildEntityStrip();
     this.#buildInspector();
@@ -115,12 +114,12 @@ export class StructurePanel {
     this.#representation = 'cartoon';
     this.#colorMode = 'chain';
     this.#selection = {};
+    this.#sequenceAnchor = null;
     this.#selectionColor = null;
     this.#selectionRepresentation = 'highlight';
     this.#selectedChain = metadata.chains[0]?.authId ?? '';
     this.#renderEntities();
     this.#renderSequence();
-    this.#selectedLabel.textContent = 'No selection';
     this.#setSelectValue(this.#representationSelect, 'cartoon');
     this.#setSelectValue(this.#colorSelect, 'chain');
     this.#setSelectValue(this.#selectionRepresentationSelect, 'highlight');
@@ -145,12 +144,13 @@ export class StructurePanel {
     this.#colorMode = 'chain';
     this.#selectedChain = '';
     this.#selection = {};
+    this.#sequenceAnchor = null;
     this.#selectionColor = null;
     this.#selectionRepresentation = 'highlight';
     this.#chainList.replaceChildren();
     this.#ligandList.replaceChildren();
     this.#sequence.setSequence('', []);
-    this.#selectedLabel.textContent = 'No selection';
+    this.#sequence.setSelection([]);
     this.#setSelectValue(this.#representationSelect, 'cartoon');
     this.#setSelectValue(this.#colorSelect, 'chain');
     this.#setSelectValue(this.#selectionRepresentationSelect, 'highlight');
@@ -192,41 +192,24 @@ export class StructurePanel {
     }
   }
 
+  /** An explicit Mol* click replaces the active selection and text draft. */
   highlightResidue(residue: SelectedResidue | null): void {
-    this.#sequence.select(residue);
     if (residue === null) {
-      this.#resetSelectionFocus(false);
-      this.#selection = {};
-      this.#selectionColor = null;
-      this.#selectedLabel.textContent = 'No selection';
-      this.#resetSelectionRepresentation();
-      this.#syncColorSwatches();
-      this.#syncSelectionActions();
+      this.#sequenceAnchor = null;
+      this.#setSelection({}, false);
       return;
     }
-
-    const chain = this.#metadata?.chains.find(
-      (candidate) => candidate.authId === residue.chainId,
-    );
-    if (chain !== undefined && chain.authId !== this.#selectedChain) {
-      this.#selectedChain = chain.authId;
-      this.#renderEntities();
+    if (residue.chainId !== this.#selectedChain) {
+      this.#selectedChain = residue.chainId;
       this.#renderSequence();
-      this.#sequence.select(residue);
     }
-    this.#setSelection(
-      {
-        residues: [
-          {
-            chainId: residue.chainId,
-            insertionCode: residue.insertionCode,
-            number: residue.number,
-          },
-        ],
-      },
-      `${residue.chainId}:${residue.compId} ${residue.number}${residue.insertionCode}`,
-      false,
-    );
+    const target: ResolvedResidueTarget = {
+      chainId: residue.chainId,
+      number: residue.number,
+      ...(residue.insertionCode ? { insertionCode: residue.insertionCode } : {}),
+    };
+    this.#sequenceAnchor = target;
+    this.#setSelection({ residues: [target] }, false, target);
   }
 
   dispose(): void {
@@ -344,7 +327,6 @@ export class StructurePanel {
     this.setBackground('white');
 
     const selectionActions = element('div', { className: 'selection-actions' }, [
-      this.#selectedLabel,
       this.#focusButton,
       this.#isolateButton,
       this.#showAllButton,
@@ -539,11 +521,8 @@ export class StructurePanel {
         title: ligand.name ?? ligand.kind,
       });
       chip.addEventListener('click', () => {
-        this.#setSelection(
-          { ligands: [{ compId: ligand.compId }] },
-          label,
-          true,
-        );
+        this.#sequenceAnchor = null;
+        this.#setSelection({ ligands: [{ compId: ligand.compId }] }, true);
         this.#callbacks.onSelect(this.#selection, true);
       });
       this.#ligandList.append(chip);
@@ -552,31 +531,63 @@ export class StructurePanel {
 
   #selectChain(chain: ChainInfo): void {
     this.#selectedChain = chain.authId;
-    this.#setSelection({ chains: [chain.authId] }, `Chain ${chain.authId}`, true);
+    this.#sequenceAnchor = null;
+    this.#setSelection({ chains: [chain.authId] }, true);
     this.#renderSequence();
     this.#callbacks.onSelect(this.#selection, true);
   }
 
-  #selectResidue(residue: ResidueInfo): void {
-    if (residue.authNumber === undefined) return;
-    this.#setSelection(
-      {
-        residues: [
-          {
-            chainId: residue.chainId,
-            insertionCode: residue.insertionCode,
-            number: residue.authNumber,
-          },
-        ],
-      },
-      `${residue.chainId}:${residue.compId} ${residue.authNumber}${residue.insertionCode}`,
-      false,
-    );
-    this.#sequence.select({
+  #selectResidue(residue: ResidueInfo, modifiers: SequenceClickModifiers): void {
+    if (!residue.isObserved || residue.authNumber === undefined) return;
+    const target: ResolvedResidueTarget = {
       chainId: residue.chainId,
-      insertionCode: residue.insertionCode,
       number: residue.authNumber,
-    });
+      ...(residue.insertionCode ? { insertionCode: residue.insertionCode } : {}),
+    };
+    const current = (this.#selection.residues ?? []).filter(
+      (item): item is ResolvedResidueTarget => item.chainId !== undefined,
+    );
+    let clicked: ResolvedResidueTarget[] = [target];
+    const anchor = this.#sequenceAnchor;
+    if (modifiers.range && anchor?.chainId === target.chainId) {
+      const chain = this.#metadata?.chains.find((item) => item.authId === target.chainId);
+      const from = chain?.residues.findIndex((item) =>
+        item.authNumber === anchor.number &&
+        item.insertionCode === (anchor.insertionCode ?? ''),
+      ) ?? -1;
+      const to = chain?.residues.findIndex((item) =>
+        item.authNumber === target.number &&
+        item.insertionCode === (target.insertionCode ?? ''),
+      ) ?? -1;
+      if (chain !== undefined && from >= 0 && to >= 0) {
+        clicked = chain.residues
+          .slice(Math.min(from, to), Math.max(from, to) + 1)
+          .filter((item) => item.isObserved && item.authNumber !== undefined)
+          .map((item) => ({
+            chainId: item.chainId,
+            number: item.authNumber!,
+            ...(item.insertionCode ? { insertionCode: item.insertionCode } : {}),
+          }));
+      }
+    }
+    let next: ResolvedResidueTarget[];
+    if (modifiers.additive) {
+      const selected = new Map(current.map((item) => [residueTargetKey(item), item]));
+      if (modifiers.range) {
+        for (const item of clicked) selected.set(residueTargetKey(item), item);
+      } else {
+        const key = residueTargetKey(target);
+        if (selected.has(key)) selected.delete(key);
+        else selected.set(key, target);
+      }
+      next = [...selected.values()];
+    } else {
+      next = clicked;
+    }
+    if (!modifiers.range || anchor?.chainId !== target.chainId) {
+      this.#sequenceAnchor = target;
+    }
+    this.#setSelection({ residues: next }, false, target);
     this.#callbacks.onSelect(this.#selection, false);
   }
 
@@ -588,26 +599,34 @@ export class StructurePanel {
       ? 'Sequence'
       : `Sequence · ${chain.authId}`;
     this.#sequence.setSequence(chain?.authId ?? '', chain?.residues ?? []);
+    this.#sequence.setSelection(
+      (this.#selection.residues ?? []).filter(
+        (item): item is ResolvedResidueTarget => item.chainId !== undefined,
+      ),
+    );
   }
 
+  /** Typing remains a draft until Enter or Select explicitly commits it. */
   #applyTextSelection(): boolean {
     const metadata = this.#metadata;
-    if (metadata === undefined || this.#selectionInput.value.trim() === '') {
-      return this.#hasSelection();
+    if (metadata === undefined) return false;
+    if (this.#selectionInput.value.trim() === '') {
+      this.#sequenceAnchor = null;
+      this.#setSelection({}, false);
+      this.#callbacks.onSelect(this.#selection, false);
+      return true;
     }
 
     try {
       const terms = parseResidueSelection(this.#selectionInput.value);
       const residues = resolveResidueSelection(terms, metadata.chains);
-      this.#setSelection(
-        { residues },
-        residues.length === 1
-          ? `${residues[0]?.chainId}:${residues[0]?.number}`
-          : `${residues.length} residues`,
-        false,
-        true,
-      );
-      this.#selectionError.textContent = '';
+      const first = residues[0];
+      if (first !== undefined && first.chainId !== this.#selectedChain) {
+        this.#selectedChain = first.chainId;
+        this.#renderSequence();
+      }
+      this.#sequenceAnchor = residues.length === 1 ? first ?? null : null;
+      this.#setSelection({ residues }, false, first);
       this.#callbacks.onSelect(this.#selection, false);
       return true;
     } catch (error) {
@@ -626,9 +645,8 @@ export class StructurePanel {
   }
 
   #ensureSelectionForAction(): boolean {
-    return this.#selectionInput.value.trim() === ''
-      ? this.#hasSelection()
-      : this.#applyTextSelection();
+    // Actions use committed selection, not an unfinished text draft.
+    return this.#hasSelection();
   }
 
   #syncModified(): void {
@@ -657,16 +675,18 @@ export class StructurePanel {
 
   #setSelection(
     selection: ViewerSelection,
-    label: string,
     focus: boolean,
-    preserveInput = false,
+    scrollTo?: ResolvedResidueTarget,
   ): void {
     this.#resetSelectionFocus(focus);
     this.#selection = selection;
     this.#selectionColor = null;
-    this.#selectedLabel.textContent = label;
-    if (!preserveInput) this.#selectionInput.value = '';
+    const residues = (selection.residues ?? []).filter(
+      (item): item is ResolvedResidueTarget => item.chainId !== undefined,
+    );
+    this.#selectionInput.value = formatResidueSelection(residues, this.#metadata?.chains ?? []);
     this.#selectionError.textContent = '';
+    this.#sequence.setSelection(residues, scrollTo);
     this.#resetSelectionRepresentation();
     this.#renderEntities();
     this.#syncColorSwatches();

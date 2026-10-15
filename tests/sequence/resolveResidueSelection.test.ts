@@ -43,6 +43,23 @@ describe('resolveResidueSelection', () => {
     ]);
   });
 
+  it('distinguishes plain author numbers and PDB insertion codes', () => {
+    expect(resolveResidueSelection(parseResidueSelection('A:11'), chains)).toEqual([
+      { chainId: 'A', number: 11 },
+    ]);
+    expect(resolveResidueSelection(parseResidueSelection('A:11A'), chains)).toEqual([
+      { chainId: 'A', number: 11, insertionCode: 'A' },
+    ]);
+    expect(resolveResidueSelection(parseResidueSelection('A:11-11A'), chains)).toEqual([
+      { chainId: 'A', number: 11 },
+      { chainId: 'A', number: 11, insertionCode: 'A' },
+    ]);
+    expect(() => resolveResidueSelection(parseResidueSelection('A:11B'), chains))
+      .toThrow('Residue A:11B is not observed');
+    expect(() => resolveResidueSelection(parseResidueSelection('A:G11A'), chains))
+      .toThrow('Residue A:11A is not G');
+  });
+
   it('rejects missing chains, unobserved residues, and empty ranges', () => {
     expect(() =>
       resolveResidueSelection(parseResidueSelection('B:10'), chains),

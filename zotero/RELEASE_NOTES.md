@@ -1,4 +1,26 @@
-# ProtPeek for Zotero 0.1.4
+# ProtPeek for Zotero 0.1.5
+
+Released on 15 October 2026.
+
+- Synchronize clicks in the protein sequence with the editable **Residues**
+  input and Mol* selection.
+- Ctrl/Cmd-click toggles residues, Shift-click selects a range, and multiple
+  selected residues remain visible in the sequence.
+- Typed residue selections apply only when explicitly confirmed with Select
+  or Enter. Invalid drafts no longer replace a valid selection.
+- Show 3D-picked residue identifiers in the same input; handle author residue
+  numbers and insertion-code suffixes without conflating distinct residues.
+- Remove the redundant selection caption while retaining the responsive
+  inspector and the less prominent White/Black controls.
+
+Download `protpeek-zotero-0.1.5.xpi` and install it using **Tools → Plugins →
+Install Plugin From File…**. Close and reopen the viewer after updating.
+
+The shared automated tests validate the UI logic and generated Zotero package.
+Native Zotero 0.1.5 behavior has not been separately exercised; see
+[validation limits](./VALIDATION.md).
+
+## 0.1.4
 
 Released on 9 October 2026.
 
@@ -39,29 +61,16 @@ Released on 8 October 2026.
 - Remove the structure-download and PNG-capture buttons from the Zotero viewer toolbar.
 - Keep Reset view and the structure-inspection controls available.
 
-Download `protpeek-zotero-0.1.2.xpi` and install it through **Tools → Plugins → Install Plugin From File…**. Close and reopen the ProtPeek viewer after updating. See [the validation report](https://github.com/MOMISBACK/ProtPeek/blob/zotero-v0.1.2/zotero/VALIDATION.md) for checks and platform limits.
+Download `protpeek-zotero-0.1.2.xpi` through Zotero's plugin installer.
 
 ## 0.1.1
 
 Released on 8 October 2026.
 
-- Fix the representation, colour, and selected-residue menus in Zotero's viewer window. The Zotero integration now uses HTML popup controls rather than platform-native select popups.
-- Keep menu values synchronized with the visualizer, including rejected operations and programmatic resets. Disabled controls follow selection and isolation state.
-- Support keyboard selection and closing with Escape, Tab, or an outside click. Remove menu listeners and observers when the viewer closes.
-- Document saving the XPI from Firefox and replacing an installed 0.1.0 plugin.
-
-Download `protpeek-zotero-0.1.1.xpi` and install it through **Tools → Plugins → Install Plugin From File…**. Close and reopen the ProtPeek viewer after updating. The plugin remains a prototype; see [the validation report](https://github.com/MOMISBACK/ProtPeek/blob/zotero-v0.1.1/zotero/VALIDATION.md) for checks and platform limits.
+- Replace unreliable native select menus with accessible HTML popup controls.
+- Add keyboard navigation, menu cleanup and disabled-state synchronization.
 
 ## 0.1.0
 
-First installable desktop prototype, released on 8 October 2026.
-
-- Scan a paper's local PDF or HTML attachment for contextual PDB, UniProt, and AlphaFold identifiers. PDF scanning covers all pages.
-- Open ProtPeek from the PDF reader toolbar, a selected identifier, the item pane, or the Tools menu.
-- Inspect structures with the existing Mol* viewer, including chains, sequences, residues, ligands, representations, colours, focus, and export controls.
-- Open local PDB and mmCIF files, or explicitly request a remote structure from RCSB PDB or AlphaFold DB.
-- Keep document scanning and local-file processing on the computer. The plugin does not edit Zotero references, annotations, or attachments.
-
-Install `protpeek-zotero-0.1.0.xpi` through Zotero's **Tools → Plugins → Install Plugin From File…** menu. The XPI is the plugin package; do not unzip it. Updates are manual for this prototype.
-
-The manifest targets Zotero 7–10. Native testing used Zotero 10.0.6 on Linux; macOS, Windows, and older Zotero versions remain unverified. OCR, EPUB scanning, and password-protected PDF extraction are outside the verified features. See [the validation report](https://github.com/MOMISBACK/ProtPeek/blob/zotero-v0.1.0/zotero/VALIDATION.md) for the automated and native checks and their limits.
+Initial installable Zotero prototype: local PDF/HTML scanning, identifiers,
+Mol* structure inspection and explicit local or remote structure loading.

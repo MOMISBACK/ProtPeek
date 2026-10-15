@@ -1,6 +1,16 @@
 # Zotero prototype validation
 
-Version: 0.1.4. Verified on 9 October 2026.
+Historical native-check baseline: 0.1.4, verified on 9 October 2026.
+
+## Version 0.1.5 shared selection changes
+
+The 0.1.5 Zotero XPI bundles the same sequence/selection UI as Chrome and Firefox.
+Unit tests cover sequence clicks, Ctrl/Cmd toggles, Shift ranges, editable text
+commit, 3D picks, insertion-coded author numbering and failure handling. The CI
+also checks that the Zotero XPI builds and passes package verification. This is
+**not** a claim of native Zotero 0.1.5 testing: the native results below refer to
+the earlier versions stated in their headings.
+
 
 ## Automated checks
 

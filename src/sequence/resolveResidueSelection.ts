@@ -30,21 +30,22 @@ function observedAt(chain: ChainInfo, number: number): ResidueInfo[] {
   );
 }
 
-function validateReference(chain: ChainInfo, reference: ResidueReference): void {
-  const matches = observedAt(chain, reference.number);
+function validateReference(chain: ChainInfo, reference: ResidueReference): ResidueInfo {
+  const matches = observedAt(chain, reference.number).filter(
+    (residue) => residue.insertionCode.toUpperCase() === (reference.insertionCode ?? ''),
+  );
+  const label = `${chain.authId}:${reference.number}${reference.insertionCode ?? ''}`;
   if (matches.length === 0) {
-    throw new Error(`Residue ${chain.authId}:${reference.number} is not observed`);
+    throw new Error(`Residue ${label} is not observed`);
   }
+  const match = matches[0]!;
   if (
     reference.residueCode !== undefined &&
-    !matches.some(
-      (residue) => residue.code.toUpperCase() === reference.residueCode,
-    )
+    match.code.toUpperCase() !== reference.residueCode
   ) {
-    throw new Error(
-      `Residue ${chain.authId}:${reference.number} is not ${reference.residueCode}`,
-    );
+    throw new Error(`Residue ${label} is not ${reference.residueCode}`);
   }
+  return match;
 }
 
 function targetForResidue(residue: ResidueInfo): ResolvedResidueTarget | null {
@@ -69,14 +70,16 @@ export function resolveResidueSelection(
   for (const term of terms) {
     const chain = chainForTerm(chains, term.chainId);
     if (term.kind === 'residue') {
-      validateReference(chain, term.residue);
-      const target = { chainId: chain.authId, number: term.residue.number };
-      targets.set(`${target.chainId}:${target.number}`, target);
+      const residue = validateReference(chain, term.residue);
+      const target = targetForResidue(residue);
+      if (target !== null) {
+        targets.set(`${target.chainId}:${target.number}:${target.insertionCode ?? ''}`, target);
+      }
     } else {
-      if (term.start.residueCode !== undefined) {
+      if (term.start.residueCode !== undefined || term.start.insertionCode !== undefined) {
         validateReference(chain, term.start);
       }
-      if (term.end.residueCode !== undefined) {
+      if (term.end.residueCode !== undefined || term.end.insertionCode !== undefined) {
         validateReference(chain, term.end);
       }
       const matches = chain.residues.filter(
@@ -84,7 +87,17 @@ export function resolveResidueSelection(
           residue.isObserved &&
           residue.authNumber !== undefined &&
           residue.authNumber >= term.start.number &&
-          residue.authNumber <= term.end.number,
+          residue.authNumber <= term.end.number &&
+          (
+            residue.authNumber !== term.start.number ||
+            term.start.insertionCode === undefined ||
+            residue.insertionCode.toUpperCase() >= term.start.insertionCode
+          ) &&
+          (
+            residue.authNumber !== term.end.number ||
+            term.end.insertionCode === undefined ||
+            residue.insertionCode.toUpperCase() <= term.end.insertionCode
+          ),
       );
       if (matches.length === 0) {
         throw new Error(

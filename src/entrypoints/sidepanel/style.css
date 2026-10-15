@@ -951,6 +951,7 @@ summary {
 
 .selection-actions {
   justify-content: flex-end;
+  flex-wrap: wrap;
   white-space: nowrap;
 }
 
@@ -964,17 +965,6 @@ summary {
 .structure-modes .compact-select {
   width: 100%;
   max-width: none;
-}
-
-.selected-label {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 115px;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: var(--font-size-label);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .selection-actions .text-button {
@@ -1177,11 +1167,6 @@ summary {
     flex-wrap: wrap;
     justify-content: flex-start;
     white-space: normal;
-  }
-
-  .selected-label {
-    flex: 1 0 100%;
-    max-width: none;
   }
 
   .selection-actions .text-button {

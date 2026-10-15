@@ -1,20 +1,26 @@
-# ProtPeek browser extensions 0.1.4
+# ProtPeek browser extensions 0.1.5
 
-- Open local GROMACS `.gro` coordinate files from the Open tab or by drag and drop.
-- Use the bundled Mol* GRO reader, with coordinates converted from nanometres to
-  ångströms and chain identifiers and bonds inferred from the coordinate file.
-- Keep mmCIF export available for the loaded GRO structure.
+- Selecting a residue in the protein sequence now fills the editable **Residues** field
+  immediately and applies the selection to the 3D structure.
+- Ctrl/Cmd-click toggles additional sequence residues; Shift-click selects a contiguous
+  sequence interval. Multiple selected residues stay highlighted in the virtualized sequence.
+- Manual residue expressions apply on **Select** or Enter; invalid expressions leave the
+  previous committed selection untouched.
+- Clicking a residue in the 3D viewer updates the same input and switches the displayed
+  chain when needed.
+- Author residue numbers and PDB insertion-code suffixes are handled separately
+  (for example `A:11` versus `A:11A`). Compact ranges never silently add
+  unselected insertion-coded residues.
+- Remove the redundant selection caption next to Focus / Isolate. Retain the
+  responsive panel and subtle White/Black background controls from 0.1.4.
 
-A concatenated GRO file opens its first frame. This release does not add
-trajectory playback, velocity display, explicit topology, or triclinic box
-reconstruction. Local files stay on the device; no dependencies or permissions
-are added.
+No added permissions or remote services. Local structure files remain on the device.
 
-## Store submission
+## Packages
 
-- Chrome Web Store: `ProtPeek-0.1.4-chrome.zip`.
-- Firefox Add-ons: `ProtPeek-0.1.4-firefox.zip`.
-- Firefox reviewer sources: `ProtPeek-0.1.4-sources.zip`.
+- Chrome: `ProtPeek-0.1.5-chrome.zip`
+- Firefox: `ProtPeek-0.1.5-firefox.zip`
+- Firefox reviewer sources: `ProtPeek-0.1.5-sources.zip`
 
-Rebuild with Node.js 24 and npm: run `npm ci`, then `npm run zip:firefox` or
-`npm run zip:chrome`. Mol* and all executable extension code are bundled locally.
+These are source-build packages; publishing to the Chrome/Firefox stores remains
+a separate store-review process. Build with Node 24 and `npm ci`.

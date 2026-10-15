@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: MPL-2.0
 import type { ResidueInfo } from '../../structures/types';
+import { residueTargetKey } from '../../sequence/formatResidueSelection';
+import type { ResolvedResidueTarget } from '../../sequence/resolveResidueSelection';
 import { button, element } from './dom';
 
 const CELL_WIDTH = 34;
 const OVERSCAN = 16;
 
+export interface SequenceClickModifiers {
+  additive: boolean;
+  range: boolean;
+}
+
 export interface VirtualSequenceOptions {
-  onResidueClick(residue: ResidueInfo): void;
+  onResidueClick(residue: ResidueInfo, modifiers: SequenceClickModifiers): void;
 }
 
 export class VirtualSequence {
@@ -17,7 +24,7 @@ export class VirtualSequence {
   readonly #resizeObserver: ResizeObserver;
   #chainId = '';
   #residues: readonly ResidueInfo[] = [];
-  #selectedKey = '';
+  #selectedKeys = new Set<string>();
   #start = -1;
   #end = -1;
 
@@ -41,19 +48,15 @@ export class VirtualSequence {
     this.#render();
   }
 
-  select(residue: {
-    chainId: string;
-    insertionCode: string;
-    number: number;
-  } | null): void {
-    this.#selectedKey = residue === null
-      ? ''
-      : `${residue.chainId}:${residue.number}:${residue.insertionCode}`;
-    if (residue?.chainId === this.#chainId) {
-      const index = this.#residues.findIndex(
-        (item) =>
-          item.authNumber === residue.number &&
-          item.insertionCode === residue.insertionCode,
+  setSelection(
+    residues: readonly ResolvedResidueTarget[],
+    scrollTo?: ResolvedResidueTarget,
+  ): void {
+    this.#selectedKeys = new Set(residues.map(residueTargetKey));
+    if (scrollTo?.chainId === this.#chainId) {
+      const index = this.#residues.findIndex((item) =>
+        item.authNumber === scrollTo.number &&
+        item.insertionCode === (scrollTo.insertionCode ?? ''),
       );
       if (index >= 0) {
         const left = index * CELL_WIDTH;
@@ -64,6 +67,7 @@ export class VirtualSequence {
         }
       }
     }
+    // Virtualized cells must also be updated when the visible range is unchanged.
     this.#start = -1;
     this.#render();
   }
@@ -94,7 +98,9 @@ export class VirtualSequence {
       const number = residue.authNumber ?? residue.labelNumber ?? index + 1;
       const item = button('', { className: 'residue-cell' });
       const key = `${residue.chainId}:${number}:${residue.insertionCode}`;
-      item.classList.toggle('is-selected', key === this.#selectedKey);
+      const selected = this.#selectedKeys.has(key);
+      item.classList.toggle('is-selected', selected);
+      item.setAttribute('aria-pressed', String(selected));
       item.classList.toggle('is-missing', !residue.isObserved);
       item.disabled = !residue.isObserved;
       item.style.width = `${CELL_WIDTH}px`;
@@ -109,7 +115,10 @@ export class VirtualSequence {
           text: `${number}${residue.insertionCode}`,
         }),
       );
-      item.addEventListener('click', () => this.#options.onResidueClick(residue));
+      item.addEventListener('click', (event) => this.#options.onResidueClick(residue, {
+        additive: event.ctrlKey || event.metaKey,
+        range: event.shiftKey,
+      }));
       this.#layer.append(item);
     }
   }
