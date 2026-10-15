@@ -531,31 +531,63 @@ export class StructurePanel {
 
   #selectChain(chain: ChainInfo): void {
     this.#selectedChain = chain.authId;
-    this.#setSelection({ chains: [chain.authId] }, `Chain ${chain.authId}`, true);
+    this.#sequenceAnchor = null;
+    this.#setSelection({ chains: [chain.authId] }, true);
     this.#renderSequence();
     this.#callbacks.onSelect(this.#selection, true);
   }
 
-  #selectResidue(residue: ResidueInfo): void {
-    if (residue.authNumber === undefined) return;
-    this.#setSelection(
-      {
-        residues: [
-          {
-            chainId: residue.chainId,
-            insertionCode: residue.insertionCode,
-            number: residue.authNumber,
-          },
-        ],
-      },
-      `${residue.chainId}:${residue.compId} ${residue.authNumber}${residue.insertionCode}`,
-      false,
-    );
-    this.#sequence.select({
+  #selectResidue(residue: ResidueInfo, modifiers: SequenceClickModifiers): void {
+    if (!residue.isObserved || residue.authNumber === undefined) return;
+    const target: ResolvedResidueTarget = {
       chainId: residue.chainId,
-      insertionCode: residue.insertionCode,
       number: residue.authNumber,
-    });
+      ...(residue.insertionCode ? { insertionCode: residue.insertionCode } : {}),
+    };
+    const current = (this.#selection.residues ?? []).filter(
+      (item): item is ResolvedResidueTarget => item.chainId !== undefined,
+    );
+    let clicked: ResolvedResidueTarget[] = [target];
+    const anchor = this.#sequenceAnchor;
+    if (modifiers.range && anchor?.chainId === target.chainId) {
+      const chain = this.#metadata?.chains.find((item) => item.authId === target.chainId);
+      const from = chain?.residues.findIndex((item) =>
+        item.authNumber === anchor.number &&
+        item.insertionCode === (anchor.insertionCode ?? ''),
+      ) ?? -1;
+      const to = chain?.residues.findIndex((item) =>
+        item.authNumber === target.number &&
+        item.insertionCode === (target.insertionCode ?? ''),
+      ) ?? -1;
+      if (chain !== undefined && from >= 0 && to >= 0) {
+        clicked = chain.residues
+          .slice(Math.min(from, to), Math.max(from, to) + 1)
+          .filter((item) => item.isObserved && item.authNumber !== undefined)
+          .map((item) => ({
+            chainId: item.chainId,
+            number: item.authNumber!,
+            ...(item.insertionCode ? { insertionCode: item.insertionCode } : {}),
+          }));
+      }
+    }
+    let next: ResolvedResidueTarget[];
+    if (modifiers.additive) {
+      const selected = new Map(current.map((item) => [residueTargetKey(item), item]));
+      if (modifiers.range) {
+        for (const item of clicked) selected.set(residueTargetKey(item), item);
+      } else {
+        const key = residueTargetKey(target);
+        if (selected.has(key)) selected.delete(key);
+        else selected.set(key, target);
+      }
+      next = [...selected.values()];
+    } else {
+      next = clicked;
+    }
+    if (!modifiers.range || anchor?.chainId !== target.chainId) {
+      this.#sequenceAnchor = target;
+    }
+    this.#setSelection({ residues: next }, false, target);
     this.#callbacks.onSelect(this.#selection, false);
   }
 
@@ -567,26 +599,34 @@ export class StructurePanel {
       ? 'Sequence'
       : `Sequence · ${chain.authId}`;
     this.#sequence.setSequence(chain?.authId ?? '', chain?.residues ?? []);
+    this.#sequence.setSelection(
+      (this.#selection.residues ?? []).filter(
+        (item): item is ResolvedResidueTarget => item.chainId !== undefined,
+      ),
+    );
   }
 
+  /** Typing remains a draft until Enter or Select explicitly commits it. */
   #applyTextSelection(): boolean {
     const metadata = this.#metadata;
-    if (metadata === undefined || this.#selectionInput.value.trim() === '') {
-      return this.#hasSelection();
+    if (metadata === undefined) return false;
+    if (this.#selectionInput.value.trim() === '') {
+      this.#sequenceAnchor = null;
+      this.#setSelection({}, false);
+      this.#callbacks.onSelect(this.#selection, false);
+      return true;
     }
 
     try {
       const terms = parseResidueSelection(this.#selectionInput.value);
       const residues = resolveResidueSelection(terms, metadata.chains);
-      this.#setSelection(
-        { residues },
-        residues.length === 1
-          ? `${residues[0]?.chainId}:${residues[0]?.number}`
-          : `${residues.length} residues`,
-        false,
-        true,
-      );
-      this.#selectionError.textContent = '';
+      const first = residues[0];
+      if (first !== undefined && first.chainId !== this.#selectedChain) {
+        this.#selectedChain = first.chainId;
+        this.#renderSequence();
+      }
+      this.#sequenceAnchor = residues.length === 1 ? first ?? null : null;
+      this.#setSelection({ residues }, false, first);
       this.#callbacks.onSelect(this.#selection, false);
       return true;
     } catch (error) {
@@ -605,9 +645,8 @@ export class StructurePanel {
   }
 
   #ensureSelectionForAction(): boolean {
-    return this.#selectionInput.value.trim() === ''
-      ? this.#hasSelection()
-      : this.#applyTextSelection();
+    // Actions use committed selection, not an unfinished text draft.
+    return this.#hasSelection();
   }
 
   #syncModified(): void {
@@ -636,16 +675,18 @@ export class StructurePanel {
 
   #setSelection(
     selection: ViewerSelection,
-    label: string,
     focus: boolean,
-    preserveInput = false,
+    scrollTo?: ResolvedResidueTarget,
   ): void {
     this.#resetSelectionFocus(focus);
     this.#selection = selection;
     this.#selectionColor = null;
-    this.#selectedLabel.textContent = label;
-    if (!preserveInput) this.#selectionInput.value = '';
+    const residues = (selection.residues ?? []).filter(
+      (item): item is ResolvedResidueTarget => item.chainId !== undefined,
+    );
+    this.#selectionInput.value = formatResidueSelection(residues, this.#metadata?.chains ?? []);
     this.#selectionError.textContent = '';
+    this.#sequence.setSelection(residues, scrollTo);
     this.#resetSelectionRepresentation();
     this.#renderEntities();
     this.#syncColorSwatches();
