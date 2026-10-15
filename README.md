@@ -6,9 +6,9 @@ ProtPeek is a free, open-source protein-structure viewer for Firefox, Chromium, 
 
 It is intended for quick inspection while reading, not as a replacement for PyMOL, ChimeraX, Coot, or other full molecular-modelling tools.
 
-[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.4/protpeek-zotero-0.1.4.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
+[Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.5/protpeek-zotero-0.1.5.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
 
-The Zotero plugin is an installable prototype (0.1.4), with local GROMACS GRO support, improved PDB detection, harmonized typography, and a saved white/black viewer background. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
+The Zotero plugin is an installable prototype (0.1.5), with local GROMACS GRO support, improved PDB detection, harmonized typography, and a saved white/black viewer background. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
 
 ![ProtPeek showing PDB 1AON](./store-assets/protpeek-640x400.png)
 
@@ -18,6 +18,7 @@ The Zotero plugin is an installable prototype (0.1.4), with local GROMACS GRO su
 - Loads structures from RCSB PDB and AlphaFold DB.
 - Opens local `.pdb`, `.cif`, `.mmcif`, `.bcif`, and `.gro` files.
 - Shows chains, sequences, residues, ligands, colours, and molecular representations.
+- Synchronizes residue selection across the sequence, editable Residues field, and 3D view; Ctrl/Cmd-click adds or removes residues and Shift-click selects a range.
 - Supports residue selection, focus/isolation, chain visibility, and surface rendering.
 - Offers a white or black structure background, saved locally independently of the interface theme.
 - Exports the visible structure as PDBx/mmCIF and the current view as PNG.
