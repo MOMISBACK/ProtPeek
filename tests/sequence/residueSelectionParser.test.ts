@@ -104,6 +104,18 @@ describe('parseResidueSelection', () => {
     ]);
   });
 
+  it('parses PDB insertion-code suffixes without changing amino-acid prefixes', () => {
+    expect(parseResidueSelection('a:11A,g12B')).toEqual([
+      { kind: 'residue', chainId: 'A', residue: { number: 11, insertionCode: 'A' } },
+      { kind: 'residue', chainId: 'A', residue: { number: 12, residueCode: 'G', insertionCode: 'B' } },
+    ]);
+    expect(parseResidueSelection('A:11-11A')).toEqual([
+      { kind: 'range', chainId: 'A', start: { number: 11 },
+        end: { number: 11, insertionCode: 'A' } },
+    ]);
+    expect(() => parseResidueSelection('A:11B-11A')).toThrow('ascending');
+  });
+
   it.each([
     ['', 'empty-selection'],
     ['  ', 'empty-selection'],
