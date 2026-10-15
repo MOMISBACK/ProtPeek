@@ -2,6 +2,14 @@
 
 Historical native-check baseline: 0.1.4, verified on 9 October 2026.
 
+## Version 0.1.6 label-layout hotfix
+
+The 0.1.6 shared sidepanel stylesheet uses a two-column grid on narrow views.
+The RESIDUES label receives its natural width and its text bounding box is
+checked against the input bounds in the production browser builds. This
+regression test covers multiple widths and light/dark themes. Zotero includes
+the same shared UI, but there has been **no native Zotero 0.1.6 GUI test**.
+
 ## Version 0.1.5 shared selection changes
 
 The 0.1.5 Zotero XPI bundles the same sequence/selection UI as Chrome and Firefox.

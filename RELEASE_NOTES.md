@@ -1,4 +1,24 @@
-# ProtPeek browser extensions 0.1.5
+# ProtPeek browser extensions 0.1.6
+
+- Fix the **RESIDUES** label overlapping the input field in narrow side panels.
+  The editor now reserves the actual label width and places selection controls
+  on separate rows when there is not enough horizontal space.
+- Associate the visible label with its input for mouse and assistive technology.
+- Add Chromium-rendered regression checks for actual label text bounds at
+  narrow and wide panel sizes, in dark and light themes.
+- No changes to protein selection semantics, extension permissions or remote endpoints.
+
+## Packages
+
+- Chrome: `ProtPeek-0.1.6-chrome.zip`
+- Firefox: `ProtPeek-0.1.6-firefox.zip`
+- Firefox reviewer sources: `ProtPeek-0.1.6-sources.zip`
+
+Store publication is separate from these GitHub release packages.
+
+---
+
+## Version 0.1.5
 
 - Selecting a residue in the protein sequence now fills the editable **Residues** field
   immediately and applies the selection to the 3D structure.

@@ -1,10 +1,10 @@
 # ProtPeek for Zotero
 
-A desktop Zotero plugin built from the same identifier scanner, loaders, UI, and Mol* viewer as the ProtPeek browser extension. Current prototype: version 0.1.5.
+A desktop Zotero plugin built from the same identifier scanner, loaders, UI, and Mol* viewer as the ProtPeek browser extension. Current prototype: version 0.1.6.
 
 ## Installation
 
-1. Download [protpeek-zotero-0.1.5.xpi](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.5/protpeek-zotero-0.1.5.xpi) from the [Zotero 0.1.5 release](https://github.com/MOMISBACK/ProtPeek/releases/tag/zotero-v0.1.5). In Firefox, **right-click → Save Link As…** to download the file rather than trying to install it as a Firefox extension. The download is already an `.xpi`; do not unzip it.
+1. Download [protpeek-zotero-0.1.6.xpi](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.6/protpeek-zotero-0.1.6.xpi) from the [Zotero 0.1.6 release](https://github.com/MOMISBACK/ProtPeek/releases/tag/zotero-v0.1.6). In Firefox, **right-click → Save Link As…** to download the file rather than trying to install it as a Firefox extension. The download is already an `.xpi`; do not unzip it.
 2. In Zotero, open **Tools → Plugins**.
 3. Drag the `.xpi` into the Plugins window, or use **Install Plugin From File…** in its settings menu.
 4. Open a PDF and click **ProtPeek** in the reader toolbar. Alternatively, select a paper and use **Tools → ProtPeek — Protein structures** or the **ProtPeek** section of the item pane.
@@ -58,7 +58,7 @@ npm run build:zotero
 npm run verify:zotero
 ```
 
-Output: `release/protpeek-zotero-0.1.5.xpi`. The unpacked package is in `.output/zotero/`. No new npm dependencies were added.
+Output: `release/protpeek-zotero-0.1.6.xpi`. The unpacked package is in `.output/zotero/`. No new npm dependencies were added.
 
 The build aliases `wxt/browser` to a Zotero adapter for the shared UI. Session communication stays in memory; the background choice uses a narrow preference getter/setter. The plugin exposes attachment scanning and this display preference instead of passing the Zotero object into the viewer. Lifecycle cleanup removes controls, unregisters reader hooks and the item-pane section, and closes viewer windows when disabled.
 
@@ -66,11 +66,11 @@ The Zotero entry point also provides a timer-based `setImmediate` implementation
 
 ## Publishing a Zotero release
 
-Update `zotero/manifest.json`, the download links, and [RELEASE_NOTES.md](./RELEASE_NOTES.md) for the new version, then merge the changes into `main`. Push a tag named `zotero-v<version>` at that commit. For version 0.1.5:
+Update `zotero/manifest.json`, the download links, and [RELEASE_NOTES.md](./RELEASE_NOTES.md) for the new version, then merge the changes into `main`. Push a tag named `zotero-v<version>` at that commit. For version 0.1.6:
 
 ```sh
-git tag zotero-v0.1.5
-git push origin zotero-v0.1.5
+git tag zotero-v0.1.6
+git push origin zotero-v0.1.6
 ```
 
 Alternatively, include `[release-zotero]` in the commit or merge message on `main`. CI then creates the matching release tag at that validated commit.
