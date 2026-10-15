@@ -362,6 +362,42 @@ async function checkSubtleSelections(client, label) {
   report.checks.push({ name: label, ...styles });
 }
 
+async function checkResiduesLabelLayout(client, name) {
+  // Element bounds alone miss ink overflow: the old 54px label box was
+  // narrower than its actual uppercase text, which overlapped the input.
+  const bounds = await client.evaluate(`(() => {
+    const label = document.querySelector('.selection-editor label');
+    const input = document.querySelector('.selection-editor .selection-input');
+    if (!label || !input) return null;
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const ink = range.getBoundingClientRect();
+    const field = input.getBoundingClientRect();
+    return {
+      text: label.textContent,
+      textLeft: ink.left, textRight: ink.right,
+      textTop: ink.top, textBottom: ink.bottom,
+      inputLeft: field.left, inputRight: field.right,
+      inputTop: field.top, inputBottom: field.bottom,
+      labelWidth: label.getBoundingClientRect().width,
+      inputWidth: field.width,
+      properlyAssociated: label.htmlFor === input.id,
+    };
+  })()`);
+  assert.ok(bounds, `${name}: missing Residues label or field`);
+  assert.equal(bounds.text, 'Residues', `${name}: wrong label`);
+  assert.equal(bounds.properlyAssociated, true, `${name}: label not associated with input`);
+  assert.ok(bounds.textRight <= bounds.inputLeft - 2 ||
+      bounds.textBottom <= bounds.inputTop + 1 ||
+      bounds.textTop >= bounds.inputBottom - 1,
+    `${name}: RESIDUES ink overlaps the input: ${JSON.stringify(bounds)}`);
+  assert.ok(bounds.inputWidth >= 40,
+    `${name}: residue field is too narrow to use: ${JSON.stringify(bounds)}`);
+  assert.ok(bounds.textLeft >= -1 && bounds.inputRight <= (await client.evaluate('innerWidth')) + 1,
+    `${name}: residue controls overflow horizontally: ${JSON.stringify(bounds)}`);
+  report.checks.push({ name, ...bounds });
+}
+
 async function checkInspector(client, label, requireScroll) {
   const bounds = await client.evaluate(`(() => {
     const panel = document.querySelector('.inspector');
@@ -439,6 +475,7 @@ async function checkExtension(client, origin, target) {
       await settled(client);
       const name = `${target}-viewer-${theme}-${width}x${height}`;
       await layout(client, name, '.nav-tab, .viewer-actions button, .structure-modes select, .selection-actions button, .view-background-choice, .selection-editor input, .selection-editor select, .selection-palette button');
+      await checkResiduesLabelLayout(client, `${name}-residues-label`);
       await checkInspector(client, name, width === 200 && height === 320);
       if ([200, 400, 680].includes(width)) await screenshot(client, name);
     }
