@@ -1,4 +1,22 @@
-# ProtPeek for Zotero 0.1.5
+# ProtPeek for Zotero 0.1.6
+
+Released on 15 October 2026.
+
+- Prevent the **RESIDUES** label from being obscured by its text input in
+  narrow ProtPeek windows. The shared responsive editor uses an intrinsic-width
+  label column and moves secondary controls beneath the field.
+- Link the visible label to the input for improved accessibility.
+- Keep 0.1.5 sequence and 3D selection behaviour unchanged.
+
+Install `protpeek-zotero-0.1.6.xpi` with **Tools → Plugins → Install Plugin
+From File…**. Close and reopen the ProtPeek window after upgrading.
+
+The shared UI and packaging run through automated CI; native Zotero GUI
+testing for 0.1.6 has not been performed.
+
+---
+
+## ProtPeek for Zotero 0.1.5
 
 Released on 15 October 2026.
 
