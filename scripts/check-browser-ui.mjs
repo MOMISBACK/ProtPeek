@@ -165,9 +165,17 @@ async function layout(client, label, selector) {
       const rect = el.getBoundingClientRect();
       return rect.width > 1 && rect.height > 1 && (rect.left < -1 || rect.right > innerWidth + 1);
     }).map(el => el.getAttribute('aria-label') || el.textContent.trim() || el.className);
-    return { width: innerWidth, scrollWidth: document.documentElement.scrollWidth, outside };
+    return {
+      width: innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      bodyScrollWidth: document.body.scrollWidth,
+      shellScrollWidth: document.querySelector('.protpeek-app')?.scrollWidth ?? 0,
+      outside,
+    };
   })()`);
   assert.ok(result.scrollWidth <= result.width + 1, `${label}: horizontal document overflow: ${JSON.stringify(result)}`);
+  assert.ok(result.bodyScrollWidth <= result.width + 1, `${label}: body overflow: ${JSON.stringify(result)}`);
+  assert.ok(result.shellScrollWidth <= result.width + 1, `${label}: shell overflow: ${JSON.stringify(result)}`);
   assert.deepEqual(result.outside, [], `${label}: controls exceed the viewport`);
   report.checks.push({ name: label, ...result });
 }
@@ -196,10 +204,15 @@ async function openFixture(client, fixture = FIXTURE) {
 }
 
 async function checkPng(client, color, name, requireStructure = false) {
-  await client.evaluate('delete globalThis.__UI_CHECK_PNG__');
-  await click(client, '.image-button');
-  await waitFor(client, 'typeof globalThis.__UI_CHECK_PNG__ === "string"', 'actual Mol* PNG export', 30_000);
-  const png = await client.evaluate(`(async () => {
+  // The residue list can become available before Mol* has drawn the geometry.
+  // Poll actual exported pixels rather than treating a transient blank frame as final.
+  let png;
+  for (let attempt = 0; attempt < (requireStructure ? 12 : 1); attempt++) {
+    await settled(client);
+    await client.evaluate('delete globalThis.__UI_CHECK_PNG__');
+    await click(client, '.image-button');
+    await waitFor(client, 'typeof globalThis.__UI_CHECK_PNG__ === "string"', 'actual Mol* PNG export', 30_000);
+    png = await client.evaluate(`(async () => {
     const image = new Image();
     image.src = globalThis.__UI_CHECK_PNG__;
     await image.decode();
@@ -221,7 +234,10 @@ async function checkPng(client, color, name, requireStructure = false) {
       }
     }
     return { width: image.width, height: image.height, corners: points.map(([x, y]) => [...ctx.getImageData(x, y, 1, 1).data]), foregroundPixels, data: image.src };
-  })()`);
+    })()`);
+    if (!requireStructure || png.foregroundPixels > 100) break;
+    await delay(250);
+  }
   assert.ok(png.width > 0 && png.height > 0, 'PNG has invalid dimensions');
   for (const pixel of png.corners) {
     assert.deepEqual(pixel, [...Array(3).fill(color === 'black' ? 0 : 255), 255], `${name}: PNG background is not ${color}`);
@@ -281,6 +297,68 @@ async function setBackground(client, color) {
   await settled(client);
 }
 
+// Include the widths on both sides of CSS breakpoints and a short side panel.
+// These checks run against the actual production Chrome and Firefox builds.
+const PANEL_SIZES = [
+  { width: 200, height: 320 },
+  { width: 240, height: 480 },
+  { width: 300, height: 900 },
+  { width: 320, height: 500 },
+  { width: 400, height: 900 },
+  { width: 461, height: 600 },
+  { width: 680, height: 600 },
+];
+
+async function checkSubtleSelections(client, label) {
+  const styles = await client.evaluate(`(() => {
+    const selected = document.querySelector('.view-background-choice[aria-pressed="true"]');
+    const navigation = document.querySelector('.nav-tab.is-active');
+    return {
+      selectedBackground: selected?.dataset.background,
+      boxShadow: selected && getComputedStyle(selected).boxShadow,
+      height: selected?.getBoundingClientRect().height,
+      navIndicator: navigation && getComputedStyle(navigation, '::before').content,
+    };
+  })()`);
+  assert.equal(styles.boxShadow, 'none', `${label}: the background choice has a selection underline`);
+  assert.ok(styles.height <= 30, `${label}: background controls are too prominent`);
+  assert.ok(['none', 'normal'].includes(styles.navIndicator), `${label}: tab selection has an underline`);
+  report.checks.push({ name: label, ...styles });
+}
+
+async function checkInspector(client, label, requireScroll) {
+  const bounds = await client.evaluate(`(() => {
+    const panel = document.querySelector('.inspector');
+    const workspace = document.querySelector('.viewer-workspace');
+    const frame = document.querySelector('.viewer-frame');
+    const result = {
+      frameHeight: frame.getBoundingClientRect().height,
+      inspectorHeight: panel.clientHeight,
+      inspectorScrollHeight: panel.scrollHeight,
+      inspectorBottom: panel.getBoundingClientRect().bottom,
+      workspaceBottom: workspace.getBoundingClientRect().bottom,
+      overflowY: getComputedStyle(panel).overflowY,
+    };
+    panel.scrollTop = panel.scrollHeight;
+    return result;
+  })()`);
+  assert.ok(bounds.frameHeight >= 59, `${label}: the 3D viewer collapsed`);
+  assert.ok(bounds.inspectorBottom <= bounds.workspaceBottom + 1, `${label}: inspector extends below the panel`);
+  assert.equal(bounds.overflowY, 'auto', `${label}: inspector cannot scroll`);
+  if (requireScroll) {
+    assert.ok(bounds.inspectorScrollHeight > bounds.inspectorHeight + 1, `${label}: inspector clips controls instead of scrolling`);
+    await settled(client);
+    const sequenceVisible = await client.evaluate(`(() => {
+      const panel = document.querySelector('.inspector').getBoundingClientRect();
+      const sequence = document.querySelector('.sequence-scroll').getBoundingClientRect();
+      return sequence.bottom <= panel.bottom + 2 && sequence.top >= panel.top - 2;
+    })()`);
+    assert.equal(sequenceVisible, true, `${label}: sequence controls are not reachable by scrolling`);
+  }
+  await client.evaluate('document.querySelector(".inspector").scrollTop = 0');
+  report.checks.push({ name: label, ...bounds });
+}
+
 async function checkExtension(client, origin, target) {
   await client.call('Emulation.setDeviceMetricsOverride', { width: 400, height: 900, deviceScaleFactor: 1, mobile: false });
   await client.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
@@ -293,12 +371,13 @@ async function checkExtension(client, origin, target) {
 
   for (const theme of ['light', 'dark']) {
     await client.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }] });
-    for (const width of [300, 400]) {
-      await client.call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
+    for (const { width, height } of PANEL_SIZES) {
+      await client.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       for (const section of ['page', 'open']) {
         await click(client, `#${section}-tab`);
-        await layout(client, `${target}-${section}-${theme}-${width}`, '.nav-tab, .scan-button, .identifier-input, .load-button, .dropzone');
-        await screenshot(client, `${target}-${section}-${theme}-${width}`);
+        const name = `${target}-${section}-${theme}-${width}x${height}`;
+        await layout(client, name, '.nav-tab, .scan-button, .page-title, .page-subtitle, .scan-result, .identifier-input, .load-button, .dropzone');
+        if ([200, 400, 680].includes(width)) await screenshot(client, name);
       }
     }
   }
@@ -308,8 +387,10 @@ async function checkExtension(client, origin, target) {
   await openFixture(client);
   await click(client, '.customization-toggle');
   await waitFor(client, 'document.querySelector("[data-background=white]")?.getAttribute("aria-pressed") === "true"', 'default white background');
+  await checkSubtleSelections(client, `${target}-background-white-style`);
   await checkPng(client, 'white', `${target}-export-white`);
   await setBackground(client, 'black');
+  await checkSubtleSelections(client, `${target}-background-black-style`);
   await checkPng(client, 'black', `${target}-export-black`);
 
   // Changing the system theme must not replace the independent canvas choice.
@@ -317,12 +398,24 @@ async function checkExtension(client, origin, target) {
     await client.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }] });
     await settled(client);
     await checkPng(client, 'black', `${target}-export-black-ui-${theme}`);
-    for (const width of [300, 400]) {
-      await client.call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
-      await layout(client, `${target}-viewer-${theme}-${width}`, '.nav-tab, .viewer-actions button, .structure-modes select, .view-background-choice, .selection-editor input, .selection-editor select');
-      await screenshot(client, `${target}-viewer-${theme}-${width}`);
+    for (const { width, height } of PANEL_SIZES) {
+      await client.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+      await settled(client);
+      const name = `${target}-viewer-${theme}-${width}x${height}`;
+      await layout(client, name, '.nav-tab, .viewer-actions button, .structure-modes select, .selection-actions button, .view-background-choice, .selection-editor input, .selection-editor select, .selection-palette button');
+      await checkInspector(client, name, width === 200 && height === 320);
+      if ([200, 400, 680].includes(width)) await screenshot(client, name);
     }
   }
+  // Navigation back to both tabs must remain usable after the viewer has loaded.
+  await client.call('Emulation.setDeviceMetricsOverride', { width: 200, height: 320, deviceScaleFactor: 1, mobile: false });
+  for (const section of ['page', 'open']) {
+    await click(client, `#${section}-tab`);
+    await layout(client, `${target}-loaded-${section}-narrow`, '.nav-tab, .header-action, .identifier-input, .load-button, .dropzone');
+  }
+  await click(client, '.header-action');
+  await layout(client, `${target}-viewer-restored-narrow`, '.nav-tab, .viewer-actions button, .view-background-choice, .selection-editor input');
+  await client.call('Emulation.setDeviceMetricsOverride', { width: 400, height: 900, deviceScaleFactor: 1, mobile: false });
   await click(client, '.viewer-actions .viewer-button[title="Reset view"]');
   await checkPng(client, 'black', `${target}-export-after-reset`);
   // Loading another local structure must retain the selected background.

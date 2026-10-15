@@ -47,11 +47,13 @@ body,
 #app {
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
   margin: 0;
 }
 
 body {
-  min-width: 300px;
+  min-width: 0;
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
@@ -107,7 +109,7 @@ summary {
   grid-template-rows: auto minmax(0, 1fr) 59px;
   width: 100%;
   height: 100dvh;
-  min-height: 480px;
+  min-height: 0;
   overflow: hidden;
   background: var(--bg);
 }
@@ -155,9 +157,12 @@ summary {
 }
 
 .app-page {
-  padding: 14px 14px 0;
-  overflow: auto;
+  padding: 14px 14px 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--panel);
+  scrollbar-width: thin;
 }
 
 .page-section-title {
@@ -217,17 +222,19 @@ summary {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 42px 22px 34px;
+  min-width: 0;
+  padding: clamp(18px, 7dvh, 42px) clamp(6px, 5vw, 22px) 28px;
   text-align: center;
 }
 
 .page-title {
   margin: 0;
   color: var(--text);
-  font-size: clamp(27px, 7.6vw, 31px);
+  font-size: clamp(21px, 7.6vw, 31px);
   font-weight: var(--font-weight-strong);
   letter-spacing: -0.047em;
   line-height: 1.06;
+  overflow-wrap: anywhere;
 }
 
 .page-subtitle {
@@ -257,9 +264,11 @@ summary {
 .scan-result {
   display: flex;
   width: 100%;
+  min-width: 0;
   min-height: 48px;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 0 2px;
   border-bottom: 1px solid var(--border);
   background: transparent;
@@ -275,6 +284,8 @@ summary {
 }
 
 .result-id {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--accent);
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-strong);
@@ -319,7 +330,8 @@ summary {
 }
 
 .identifier-input {
-  width: 100%;
+  width: auto;
+  flex: 1 1 155px;
 }
 
 .identifier-input::placeholder,
@@ -383,11 +395,13 @@ summary {
 .dropzone {
   display: flex;
   width: 100%;
+  min-width: 0;
   min-height: 150px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: clamp(12px, 5vw, 24px);
+  overflow-wrap: anywhere;
   border: 1px dashed var(--drop-border);
   border-radius: 12px;
   background: var(--drop-bg);
@@ -449,17 +463,7 @@ summary {
 
 .nav-tab.is-active {
   color: var(--text);
-}
-
-.nav-tab.is-active::before {
-  position: absolute;
-  right: 31%;
-  bottom: 0;
-  left: 31%;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: var(--accent);
-  content: "";
+  font-weight: var(--font-weight-strong);
 }
 
 .nav-tab:disabled {
@@ -538,7 +542,7 @@ summary {
 .viewer-frame {
   position: relative;
   min-width: 0;
-  min-height: 220px;
+  min-height: clamp(80px, 22dvh, 220px);
   flex: 1 1 auto;
   overflow: hidden;
   background: var(--bg);
@@ -598,6 +602,8 @@ summary {
 }
 
 .error-box {
+  min-width: 0;
+  overflow-wrap: anywhere;
   position: absolute;
   z-index: 12;
   right: 10px;
@@ -705,7 +711,8 @@ summary {
 }
 
 .entity-chip.is-selected {
-  box-shadow: inset 0 -2px 0 var(--accent);
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
 }
 
 .entity-strip {
@@ -812,10 +819,15 @@ summary {
 
 .inspector {
   min-width: 0;
+  min-height: 0;
+  max-height: min(56%, 360px);
   flex: 0 1 auto;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--surface);
+  scrollbar-width: thin;
 }
 
 .customization-panel {
@@ -900,51 +912,41 @@ summary {
 
 .view-background-control {
   display: flex;
-  min-height: 31px;
+  min-height: 28px;
+  flex-wrap: wrap;
   align-items: center;
-  margin-top: 8px;
+  gap: 4px;
+  margin-top: 6px;
 }
 
 .view-background-control > span {
-  margin-right: 8px;
+  margin-right: 4px;
   color: var(--text-muted);
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-medium);
 }
 
 .view-background-choice {
-  min-width: 58px;
-  min-height: 31px;
-  padding: 4px 10px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
-  color: var(--text);
-  font-size: var(--font-size-control);
+  min-width: 0;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
   font-weight: var(--font-weight-medium);
-}
-
-.view-background-choice:first-of-type {
-  border-radius: var(--radius-control) 0 0 var(--radius-control);
-}
-
-.view-background-choice:last-of-type {
-  border-left: 0;
-  border-radius: 0 var(--radius-control) var(--radius-control) 0;
 }
 
 .view-background-choice:hover:not(:disabled) {
   background: var(--surface-hover);
+  color: var(--text);
 }
 
 .view-background-choice[aria-pressed="true"] {
-  background: var(--accent-soft);
-  color: var(--accent);
-  box-shadow: inset 0 -2px 0 var(--accent);
-}
-
-.view-background-choice:focus-visible {
-  position: relative;
-  z-index: 1;
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text);
 }
 
 .selection-actions {
@@ -1042,6 +1044,7 @@ summary {
 .field-error {
   min-height: 16px;
   margin: 2px 0 0 61px;
+  overflow-wrap: anywhere;
   color: var(--danger);
   font-size: var(--font-size-label);
 }
@@ -1092,7 +1095,7 @@ summary {
 }
 
 .residue-cell.is-selected {
-  box-shadow: inset 0 -2px 0 var(--accent);
+  background: var(--accent-soft);
 }
 
 .residue-cell.is-missing {
@@ -1119,6 +1122,10 @@ summary {
     gap: 7px;
   }
 
+  .app-page {
+    padding: 10px 10px 12px;
+  }
+
   .identifier-input {
     padding-inline: 6px;
   }
@@ -1129,6 +1136,10 @@ summary {
 
   .selection-editor {
     flex-wrap: wrap;
+  }
+
+  .selection-representation {
+    max-width: 100%;
   }
 
   .structure-modes,
@@ -1149,6 +1160,36 @@ summary {
   }
 }
 
+@media (max-width: 320px) {
+  .identifier-form {
+    flex-wrap: wrap;
+  }
+
+  .load-button {
+    flex: 1 0 100%;
+  }
+
+  .structure-modes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .selection-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    white-space: normal;
+  }
+
+  .selected-label {
+    flex: 1 0 100%;
+    max-width: none;
+  }
+
+  .selection-actions .text-button {
+    flex: 1 1 auto;
+    padding-inline: 5px;
+  }
+}
+
 @media (max-height: 620px) {
   .protpeek-app {
     grid-template-rows: auto minmax(0, 1fr) 52px;
@@ -1156,11 +1197,26 @@ summary {
   }
 
   .viewer-frame {
-    min-height: 120px;
+    min-height: clamp(70px, 20dvh, 120px);
   }
 
   .sequence-scroll {
     height: 51px;
+  }
+}
+
+@media (max-height: 380px) {
+  .viewer-frame {
+    min-height: 60px;
+  }
+
+  .viewer-detected-bar {
+    min-height: 32px;
+    padding-block: 3px;
+  }
+
+  .inspector {
+    max-height: 48%;
   }
 }
 
