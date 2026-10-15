@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import { parseResidueSelection } from '../../sequence/residueSelectionParser';
+import { formatResidueSelection, residueTargetKey } from '../../sequence/formatResidueSelection';
+import type { ResolvedResidueTarget } from '../../sequence/resolveResidueSelection';
 import { resolveResidueSelection } from '../../sequence/resolveResidueSelection';
 import type {
   ChainInfo,
@@ -16,6 +18,7 @@ import type {
 } from '../../viewer/StructureViewer';
 import { button, element, SELECT_VALUE_CHANGED, setHidden } from './dom';
 import { VirtualSequence } from './VirtualSequence';
+import type { SequenceClickModifiers } from './VirtualSequence';
 
 export interface StructurePanelCallbacks {
   onBackground: (background: ViewerBackground) => void;
@@ -42,7 +45,7 @@ export class StructurePanel {
   readonly #chainList = element('div', { className: 'entity-group chain-list' });
   readonly #ligandList = element('div', { className: 'entity-group ligand-list' });
   readonly #sequence = new VirtualSequence({
-    onResidueClick: (residue) => this.#selectResidue(residue),
+    onResidueClick: (residue, modifiers) => this.#selectResidue(residue, modifiers),
   });
   readonly #sequenceTitle = element('h2', {
     className: 'section-label',
@@ -62,10 +65,6 @@ export class StructurePanel {
   });
   readonly #colorSwatches = new Map<number, HTMLButtonElement>();
   readonly #backgroundChoices = new Map<ViewerBackground, HTMLButtonElement>();
-  readonly #selectedLabel = element('span', {
-    className: 'selected-label',
-    text: 'No selection',
-  });
   readonly #focusButton = button('Focus', { className: 'text-button' });
   readonly #isolateButton = button('Isolate', { className: 'text-button' });
   readonly #showAllButton = button('Show all', { className: 'text-button' });
@@ -84,6 +83,7 @@ export class StructurePanel {
   #selectionRepresentationRequest = 0;
   #colorModeRequest = 0;
   #selection: ViewerSelection = {};
+  #sequenceAnchor: ResolvedResidueTarget | null = null;
 
   constructor(callbacks: StructurePanelCallbacks) {
     this.#callbacks = callbacks;
@@ -95,7 +95,6 @@ export class StructurePanel {
     this.#selectionInput.setAttribute('aria-describedby', 'selection-error');
     this.#selectionError.id = 'selection-error';
     this.#selectionError.setAttribute('aria-live', 'polite');
-    this.#selectedLabel.setAttribute('aria-live', 'polite');
 
     this.#buildEntityStrip();
     this.#buildInspector();
@@ -115,12 +114,12 @@ export class StructurePanel {
     this.#representation = 'cartoon';
     this.#colorMode = 'chain';
     this.#selection = {};
+    this.#sequenceAnchor = null;
     this.#selectionColor = null;
     this.#selectionRepresentation = 'highlight';
     this.#selectedChain = metadata.chains[0]?.authId ?? '';
     this.#renderEntities();
     this.#renderSequence();
-    this.#selectedLabel.textContent = 'No selection';
     this.#setSelectValue(this.#representationSelect, 'cartoon');
     this.#setSelectValue(this.#colorSelect, 'chain');
     this.#setSelectValue(this.#selectionRepresentationSelect, 'highlight');
@@ -145,12 +144,13 @@ export class StructurePanel {
     this.#colorMode = 'chain';
     this.#selectedChain = '';
     this.#selection = {};
+    this.#sequenceAnchor = null;
     this.#selectionColor = null;
     this.#selectionRepresentation = 'highlight';
     this.#chainList.replaceChildren();
     this.#ligandList.replaceChildren();
     this.#sequence.setSequence('', []);
-    this.#selectedLabel.textContent = 'No selection';
+    this.#sequence.setSelection([]);
     this.#setSelectValue(this.#representationSelect, 'cartoon');
     this.#setSelectValue(this.#colorSelect, 'chain');
     this.#setSelectValue(this.#selectionRepresentationSelect, 'highlight');
@@ -192,41 +192,24 @@ export class StructurePanel {
     }
   }
 
+  /** An explicit Mol* click replaces the active selection and text draft. */
   highlightResidue(residue: SelectedResidue | null): void {
-    this.#sequence.select(residue);
     if (residue === null) {
-      this.#resetSelectionFocus(false);
-      this.#selection = {};
-      this.#selectionColor = null;
-      this.#selectedLabel.textContent = 'No selection';
-      this.#resetSelectionRepresentation();
-      this.#syncColorSwatches();
-      this.#syncSelectionActions();
+      this.#sequenceAnchor = null;
+      this.#setSelection({}, false);
       return;
     }
-
-    const chain = this.#metadata?.chains.find(
-      (candidate) => candidate.authId === residue.chainId,
-    );
-    if (chain !== undefined && chain.authId !== this.#selectedChain) {
-      this.#selectedChain = chain.authId;
-      this.#renderEntities();
+    if (residue.chainId !== this.#selectedChain) {
+      this.#selectedChain = residue.chainId;
       this.#renderSequence();
-      this.#sequence.select(residue);
     }
-    this.#setSelection(
-      {
-        residues: [
-          {
-            chainId: residue.chainId,
-            insertionCode: residue.insertionCode,
-            number: residue.number,
-          },
-        ],
-      },
-      `${residue.chainId}:${residue.compId} ${residue.number}${residue.insertionCode}`,
-      false,
-    );
+    const target: ResolvedResidueTarget = {
+      chainId: residue.chainId,
+      number: residue.number,
+      ...(residue.insertionCode ? { insertionCode: residue.insertionCode } : {}),
+    };
+    this.#sequenceAnchor = target;
+    this.#setSelection({ residues: [target] }, false, target);
   }
 
   dispose(): void {
@@ -344,7 +327,6 @@ export class StructurePanel {
     this.setBackground('white');
 
     const selectionActions = element('div', { className: 'selection-actions' }, [
-      this.#selectedLabel,
       this.#focusButton,
       this.#isolateButton,
       this.#showAllButton,
@@ -539,11 +521,8 @@ export class StructurePanel {
         title: ligand.name ?? ligand.kind,
       });
       chip.addEventListener('click', () => {
-        this.#setSelection(
-          { ligands: [{ compId: ligand.compId }] },
-          label,
-          true,
-        );
+        this.#sequenceAnchor = null;
+        this.#setSelection({ ligands: [{ compId: ligand.compId }] }, true);
         this.#callbacks.onSelect(this.#selection, true);
       });
       this.#ligandList.append(chip);
