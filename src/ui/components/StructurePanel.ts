@@ -88,6 +88,7 @@ export class StructurePanel {
   constructor(callbacks: StructurePanelCallbacks) {
     this.#callbacks = callbacks;
     this.#selectionInput.type = 'text';
+    this.#selectionInput.id = 'residue-selection-input';
     this.#selectionInput.placeholder = 'A:254,278 or A:254-281';
     this.#selectionInput.autocomplete = 'off';
     this.#selectionInput.spellcheck = false;
@@ -404,8 +405,13 @@ export class StructurePanel {
       palette.append(swatch);
     }
 
+    const selectionLabel = element('label', {
+      className: 'section-label',
+      text: 'Residues',
+    });
+    selectionLabel.htmlFor = this.#selectionInput.id;
     const selectionEditor = element('div', { className: 'selection-editor' }, [
-      element('label', { className: 'section-label', text: 'Residues' }),
+      selectionLabel,
       this.#selectionInput,
       selectButton,
       this.#selectionRepresentationSelect,
