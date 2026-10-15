@@ -269,6 +269,42 @@ async function checkGro(client, target) {
   assert.deepEqual(residues.map(({ number }) => number), ['41', '42', '43', '44'], 'GRO author residue numbers changed');
   assert.ok(residues.every(({ title, disabled }) => title.startsWith('Chain A') && !disabled), 'GRO observed residues must be selectable on the inferred chain');
   report.checks.push({ name: `${target}-gro-sequence`, residues });
+
+  // The same selection must appear in the sequence, the editable Residues
+  // input, and the live viewer. Exercise actual DOM mouse modifiers.
+  await click(client, '.residue-cell:not(:disabled)');
+  await waitFor(client,
+    "document.querySelector('.selection-input')?.value === 'A:41' && document.querySelectorAll('.residue-cell.is-selected').length === 1",
+    'single sequence pick populates Residues');
+  await client.evaluate(`(() => {
+    const cell = [...document.querySelectorAll('.residue-cell')].find(
+      item => item.querySelector('.residue-number')?.textContent === '42',
+    );
+    cell.dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }));
+  })()`);
+  await waitFor(client, "document.querySelector('.selection-input')?.value === 'A:41-42'", 'Ctrl-click selection');
+  await client.evaluate(`(() => {
+    const cell = [...document.querySelectorAll('.residue-cell')].find(
+      item => item.querySelector('.residue-number')?.textContent === '44',
+    );
+    cell.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+  })()`);
+  await waitFor(client,
+    "document.querySelector('.selection-input')?.value === 'A:42-44' && document.querySelectorAll('.residue-cell.is-selected').length === 3",
+    'Shift-click range updates selected sequence');
+  await client.evaluate("document.querySelector('.selection-input').value = 'A:41,43'");
+  await click(client, '.selection-editor .primary-small');
+  await waitFor(client,
+    "document.querySelector('.selection-input')?.value === 'A:41,43' && document.querySelectorAll('.residue-cell.is-selected').length === 2",
+    'committed text selection');
+  await client.evaluate("document.querySelector('.selection-input').value = 'A:400'");
+  await click(client, '.selection-editor .primary-small');
+  await waitFor(client,
+    "document.querySelector('.field-error')?.textContent.includes('not observed') && document.querySelectorAll('.residue-cell.is-selected').length === 2",
+    'invalid text leaves previous selection untouched');
+  await screenshot(client, `${target}-gro-residue-selection`);
+  report.checks.push({ name: `${target}-selection-synchronization`, keyboard: true, sequence: true, input: true });
+
   await checkPng(client, 'black', `${target}-gro-render`, true);
 
   // Round-trip the actual loaded model through the browser's export control.
