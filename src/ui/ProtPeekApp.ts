@@ -39,6 +39,11 @@ import { ViewerBackgroundPreference } from './viewerBackgroundPreference';
 type Loader = (signal: AbortSignal) => Promise<LoadedStructureData>;
 type PanelSection = 'open' | 'page';
 
+interface ProtPeekAppOptions {
+  notice?: HTMLElement;
+  onStructureLoaded?: () => void;
+}
+
 const ERROR_MESSAGES: Record<string, string> = {
   'file-too-large': 'This structure is too large to open safely',
   'invalid-file': 'This file could not be read',
@@ -143,6 +148,7 @@ export class ProtPeekApp {
   readonly #panel: StructurePanel;
   readonly #resizeObserver: ResizeObserver;
   readonly #backgroundPreference: ViewerBackgroundPreference;
+  readonly #options: ProtPeekAppOptions;
   #disposed = false;
   #activeArticleTabId: number | undefined;
   #activeIdentifierKey: string | undefined;
@@ -158,8 +164,9 @@ export class ProtPeekApp {
     | undefined;
   #windowId: number | undefined;
 
-  constructor(root: HTMLElement) {
+  constructor(root: HTMLElement, options: ProtPeekAppOptions = {}) {
     this.#root = root;
+    this.#options = options;
     this.#backgroundPreference = new ViewerBackgroundPreference(browser.storage.local);
     this.#viewer = new LazyStructureViewer(this.#viewerHost, {
       onContextLost: () => this.#showError('WebGL context was lost. Waiting for recovery…', false),
@@ -413,6 +420,7 @@ export class ProtPeekApp {
       this.#pageView,
       this.#openView,
       this.#viewerWorkspace,
+      this.#options.notice,
       navigation,
     ]);
     this.#root.replaceChildren(shell);
@@ -682,6 +690,7 @@ export class ProtPeekApp {
       setHidden(this.#downloadButton, false);
       setHidden(this.#imageButton, false);
       this.#lastLoad = undefined;
+      this.#options.onStructureLoaded?.();
       this.#recordPerformance(
         label,
         result.metadata.atomCount,

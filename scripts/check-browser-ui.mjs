@@ -35,6 +35,7 @@ const extensionStub = `(() => {
     runtime: { id: 'protpeek-ui-check', onMessage: event(), sendMessage: async () => ({ refreshed: false }) },
     windows: { getCurrent: async () => ({ id: 1 }) },
     tabs: {
+      create: async ({ url }) => { globalThis.__UI_CHECK_REVIEW_URL__ = url; return {}; },
       query: async () => [], get: async () => ({ id: 1, active: true, windowId: 1, status: 'complete' }),
       onActivated: event(), onUpdated: event(),
     },
@@ -499,6 +500,74 @@ async function checkExtension(client, origin, target) {
   await openFixture(client);
   await checkPng(client, 'black', `${target}-export-after-panel-reopen`);
   await checkGro(client, target);
+  await checkReviewPrompt(client, target);
+}
+
+async function checkReviewPrompt(client, target) {
+  const seed = `(() => {
+    const now = Date.now();
+    localStorage.setItem('protpeek-ui-check-storage', JSON.stringify({
+      'protpeek:review-prompt': {
+        firstUsedAt: now - 8 * 86400000,
+        lastUsedDay: new Date(now - 86400000).toISOString().slice(0, 10),
+        activeDays: 4, promptCount: 0, nextPromptAt: 0, dismissed: false,
+      },
+    }));
+  })()`;
+  await client.evaluate(seed);
+  await reload(client);
+  assert.equal(await client.evaluate('document.querySelector(".review-prompt").hidden'), true, 'No review prompt just for opening a panel');
+  await openFixture(client);
+  await waitFor(client, 'document.querySelector(".review-prompt")?.hidden === false', 'review invitation after successful use');
+  for (const theme of ['light', 'dark']) {
+    await client.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }] });
+    for (const { width, height } of [{ width: 200, height: 320 }, { width: 400, height: 900 }]) {
+      await client.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+      const name = `${target}-review-${theme}-${width}x${height}`;
+      await layout(client, name, '.review-prompt, .review-prompt button, .nav-tab');
+      const bounds = await client.evaluate(`(() => {
+        const prompt = document.querySelector('.review-prompt').getBoundingClientRect();
+        const navigation = document.querySelector('.bottom-nav').getBoundingClientRect();
+        return {
+          clipped: [...document.querySelectorAll('.review-prompt button')].filter(button => {
+            const rect = button.getBoundingClientRect();
+            return rect.top < prompt.top || rect.bottom > prompt.bottom;
+          }).map(button => button.textContent),
+          navigationBottom: navigation.bottom, height: innerHeight,
+        };
+      })()`);
+      assert.deepEqual(bounds.clipped, [], `${name}: review actions must be visible without scrolling`);
+      assert.ok(bounds.navigationBottom <= bounds.height + 1, `${name}: bottom navigation must remain visible`);
+      await screenshot(client, name);
+    }
+  }
+  await click(client, '.review-prompt-actions button:nth-child(2)');
+  assert.equal(await client.evaluate('document.querySelector(".review-prompt").hidden'), true);
+  await reload(client);
+  await openFixture(client);
+  assert.equal(await client.evaluate('document.querySelector(".review-prompt").hidden'), true, 'Later persists across panel reopen');
+  await client.evaluate(seed);
+  await reload(client);
+  await openFixture(client);
+  await waitFor(client, 'document.querySelector(".review-prompt")?.hidden === false', 'eligible review invitation');
+  assert.equal(await client.evaluate('globalThis.__UI_CHECK_REVIEW_URL__'), undefined, 'Store must not open automatically');
+  await click(client, '.review-prompt-primary');
+  await waitFor(client, 'document.querySelector(".review-prompt")?.hidden === true', 'review link completion');
+  const expected = target.startsWith('firefox')
+    ? 'https://addons.mozilla.org/firefox/addon/protpeek/reviews/'
+    : 'https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck/reviews';
+  assert.equal(await client.evaluate('globalThis.__UI_CHECK_REVIEW_URL__'), expected, 'Correct store review URL');
+  await waitFor(client, `JSON.parse(localStorage.getItem('protpeek-ui-check-storage'))['protpeek:review-prompt'].dismissed === true`, 'persistent review dismissal');
+  await client.evaluate(seed);
+  await reload(client);
+  await openFixture(client);
+  await waitFor(client, 'document.querySelector(".review-prompt")?.hidden === false', 'eligible opt-out invitation');
+  await click(client, '.review-prompt-actions button:nth-child(3)');
+  await waitFor(client, `JSON.parse(localStorage.getItem('protpeek-ui-check-storage'))['protpeek:review-prompt'].dismissed === true`, 'persistent opt-out');
+  await reload(client);
+  await openFixture(client);
+  assert.equal(await client.evaluate('document.querySelector(".review-prompt").hidden'), true, 'Opt-out persists across panel reopen');
+  report.checks.push({ name: `${target}-review-scheduling-actions-and-store` });
 }
 
 async function checkDocs(client, origin) {
