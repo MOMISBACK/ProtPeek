@@ -1205,7 +1205,7 @@ summary {
 
 @media (max-height: 620px) {
   .protpeek-app {
-    grid-template-rows: auto minmax(0, 1fr) 52px;
+    grid-template-rows: auto minmax(0, 1fr) auto 52px;
     min-height: 0;
   }
 

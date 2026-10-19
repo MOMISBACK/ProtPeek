@@ -525,6 +525,19 @@ async function checkReviewPrompt(client, target) {
       await client.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       const name = `${target}-review-${theme}-${width}x${height}`;
       await layout(client, name, '.review-prompt, .review-prompt button, .nav-tab');
+      const bounds = await client.evaluate(`(() => {
+        const prompt = document.querySelector('.review-prompt').getBoundingClientRect();
+        const navigation = document.querySelector('.bottom-nav').getBoundingClientRect();
+        return {
+          clipped: [...document.querySelectorAll('.review-prompt button')].filter(button => {
+            const rect = button.getBoundingClientRect();
+            return rect.top < prompt.top || rect.bottom > prompt.bottom;
+          }).map(button => button.textContent),
+          navigationBottom: navigation.bottom, height: innerHeight,
+        };
+      })()`);
+      assert.deepEqual(bounds.clipped, [], `${name}: review actions must be visible without scrolling`);
+      assert.ok(bounds.navigationBottom <= bounds.height + 1, `${name}: bottom navigation must remain visible`);
       await screenshot(client, name);
     }
   }
