@@ -1274,7 +1274,7 @@ summary {
 .review-prompt {
   grid-area: notice;
   min-width: 0;
-  max-height: 30vh;
+  max-height: 40vh;
   overflow: auto;
   padding: 10px 12px;
   border-top: 1px solid var(--border);

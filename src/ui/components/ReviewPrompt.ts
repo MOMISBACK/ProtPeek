@@ -16,7 +16,7 @@ export class ReviewPrompt {
     const dismiss = button("Don't ask again");
     const actions = element('div', { className: 'review-prompt-actions' }, [review, later, dismiss]);
     this.element.append(
-      element('p', { text: 'How is ProtPeek working for you? Share your experience with other researchers.' }),
+      element('p', { text: 'Share your experience with ProtPeek.' }),
       actions,
     );
     setHidden(this.element, true);
