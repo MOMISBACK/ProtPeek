@@ -11,6 +11,8 @@ import {
   sidePanelTabActivatedMessage,
 } from '../../browser/sidePanelSession';
 import { ProtPeekApp } from '../../ui/ProtPeekApp';
+import { ReviewPrompt } from '../../ui/components/ReviewPrompt';
+import { ReviewPromptSchedule } from '../../ui/reviewPrompt';
 import { logger } from '../../utils/logger';
 
 const root = document.querySelector<HTMLElement>('#app');
@@ -19,7 +21,17 @@ if (root === null) {
   throw new Error('ProtPeek root element is missing');
 }
 
-const app = new ProtPeekApp(root);
+const reviewUrl = import.meta.env.BROWSER === 'firefox'
+  ? 'https://addons.mozilla.org/firefox/addon/protpeek/reviews/'
+  : 'https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck/reviews';
+const reviewPrompt = new ReviewPrompt(
+  new ReviewPromptSchedule(browser.storage.local),
+  () => browser.tabs.create({ url: reviewUrl }),
+);
+const app = new ProtPeekApp(root, {
+  notice: reviewPrompt.element,
+  onStructureLoaded: () => reviewPrompt.recordSuccessfulUse(),
+});
 void app.initialize();
 
 // Listen from the live panel document so ordinary background tab changes never
@@ -158,6 +170,7 @@ void browser.windows
 window.addEventListener(
   'pagehide',
   () => {
+    reviewPrompt.dispose();
     clearActivationTimer();
     if (tabActivationListener !== undefined) {
       browser.tabs.onActivated.removeListener(tabActivationListener);

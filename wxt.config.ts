@@ -33,8 +33,9 @@ export default defineConfig({
     ],
   },
   manifest: ({ browser }) => ({
-    name: 'ProtPeek',
-    description: 'Peek at protein structures without leaving the article you are reading.',
+    name: 'ProtPeek – Protein Structure Viewer',
+    short_name: 'ProtPeek',
+    description: 'View 3D protein structures while reading papers. Detect PDB IDs and open PDB or mmCIF files in your browser.',
     homepage_url: 'https://github.com/MOMISBACK/ProtPeek',
     action: {
       default_icon: ICONS,

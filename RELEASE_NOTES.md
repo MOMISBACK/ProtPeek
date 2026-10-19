@@ -1,4 +1,28 @@
-# ProtPeek browser extensions 0.1.6
+# ProtPeek browser extensions 0.1.7
+
+- Rename the browser packages to **ProtPeek – Protein Structure Viewer**, retain
+  **ProtPeek** as the short name, and clarify the store summary.
+- Add a non-blocking review invitation after at least seven days and five distinct
+  days with a successfully displayed structure. Failed loads and merely opening
+  the panel do not count.
+- Offer **Leave a review**, **Later**, and **Don't ask again**. At most two
+  invitations are shown, separated by 30 days, even when ignored. Opening the
+  store review page or opting out stops future invitations.
+- Store only local scheduling values; no analytics, new permissions, or network
+  requests are added. The appropriate store opens only on an explicit click.
+- The review invitation is browser-only; Zotero remains at version 0.1.6.
+
+## Packages
+
+- Chrome: `ProtPeek-0.1.7-chrome.zip`
+- Firefox: `ProtPeek-0.1.7-firefox.zip`
+- Firefox reviewer sources: `ProtPeek-0.1.7-sources.zip`
+
+Store publication is separate from these GitHub release packages.
+
+---
+
+## Version 0.1.6
 
 - Fix the **RESIDUES** label overlapping the input field in narrow side panels.
   The editor now reserves the actual label width and places selection controls

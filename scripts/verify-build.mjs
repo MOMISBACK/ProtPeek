@@ -117,6 +117,8 @@ for (const target of TARGETS) {
 
   checkEqual(target.name, 'manifest_version', manifest.manifest_version, 3);
   checkEqual(target.name, 'version', manifest.version, PACKAGE_VERSION);
+  checkEqual(target.name, 'name', manifest.name, 'ProtPeek – Protein Structure Viewer');
+  checkEqual(target.name, 'short_name', manifest.short_name, 'ProtPeek');
   checkExactStringSet(
     target.name,
     'permissions',
