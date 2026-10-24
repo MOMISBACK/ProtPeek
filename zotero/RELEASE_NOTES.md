@@ -1,4 +1,24 @@
-# ProtPeek for Zotero 0.1.6
+# ProtPeek for Zotero 0.1.7
+
+Released on 24 October 2026.
+
+- Prevent chain selections from mixing author and label chain identifiers in
+  mmCIF files. Focus, isolation and visibility use the same exact chain match.
+- Distinguish ordinary author residue numbers from insertion-coded residues:
+  selecting `A:6` no longer includes `A:6A`.
+- Add regression checks using the real Mol* parser and selection engine.
+- Refresh build/test tooling and vulnerable transitive dependencies within the
+  existing major versions. The browser review invitation remains browser-only.
+
+Install `protpeek-zotero-0.1.7.xpi` with **Tools → Plugins → Install Plugin
+From File…**. Close and reopen the ProtPeek window after upgrading.
+
+Automated shared-engine tests and XPI verification cover this release;
+native Zotero GUI testing for 0.1.7 has not been performed.
+
+---
+
+## ProtPeek for Zotero 0.1.6
 
 Released on 15 October 2026.
 

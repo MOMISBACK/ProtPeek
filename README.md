@@ -6,9 +6,9 @@ ProtPeek is a free, open-source protein-structure viewer for Firefox, Chromium, 
 
 It is intended for quick inspection while reading, not as a replacement for PyMOL, ChimeraX, Coot, or other full molecular-modelling tools.
 
-[Browser release 0.1.6](https://github.com/MOMISBACK/ProtPeek/releases/tag/browser-v0.1.6) · [Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.6/protpeek-zotero-0.1.6.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
+[Browser release 0.1.8](https://github.com/MOMISBACK/ProtPeek/releases/tag/browser-v0.1.8) · [Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.7/protpeek-zotero-0.1.7.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
 
-The Zotero plugin is an installable prototype (0.1.6), with local GROMACS GRO support, improved PDB detection, harmonized typography, and a saved white/black viewer background. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
+The Zotero plugin is an installable prototype (0.1.7), with local GROMACS GRO support, improved PDB detection, harmonized typography, and a saved white/black viewer background. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
 
 ![ProtPeek showing PDB 1AON](./store-assets/protpeek-640x400.png)
 
@@ -57,6 +57,11 @@ npm run verify:build
 npm run build:zotero
 npm run verify:zotero
 ```
+
+The CI interface check renders both browser builds in Chromium over local HTTP
+with simulated extension APIs. It does not verify native Firefox installation
+or browser-specific extension API behavior. Zotero's native validation scope is
+recorded separately in [VALIDATION.md](./zotero/VALIDATION.md).
 
 Release archives for the browsers and Zotero:
 
