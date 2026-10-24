@@ -2,6 +2,16 @@
 
 Historical native-check baseline: 0.1.4, verified on 9 October 2026.
 
+## Version 0.1.7 selection precision fixes
+
+Regression tests parse synthetic mmCIF structures with the real Mol* reader
+and run the generated selection schemas through Mol*'s selection engine.
+They check crossed author/label chain identifiers and distinguish an ordinary
+residue number from residues with insertion codes. The shared selectors also
+serve focus, isolation and chain visibility. All 416 tests, TypeScript and
+ESLint pass. Both browser builds and the XPI pass package verification, and
+`npm audit` reports zero known vulnerabilities; there has been **no native Zotero 0.1.7 GUI test**.
+
 ## Version 0.1.6 label-layout hotfix
 
 The 0.1.6 shared sidepanel stylesheet uses a two-column grid on narrow views.

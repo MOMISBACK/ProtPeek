@@ -1,4 +1,28 @@
-# ProtPeek browser extensions 0.1.7
+# ProtPeek browser extensions 0.1.8
+
+- Resolve chain selections using the chain's author/label identity instead of
+  matching both identifier namespaces independently. Crossed mmCIF author and
+  label chain IDs no longer add an unrelated chain to a selection.
+- Match an absent PDB insertion code explicitly: selecting `A:6` no longer also
+  selects `A:6A`. Explicit insertion-coded targets retain their exact identity.
+- Apply the same precise selectors to focus, isolation and chain visibility,
+  including the visible structure used for browser exports.
+- Include the store metadata and delayed review invitation prepared in 0.1.7.
+- Update Vite, Vitest and vulnerable transitive dependencies within the existing
+  major versions, without adding runtime services or permissions.
+
+## Packages
+
+- Chrome: `ProtPeek-0.1.8-chrome.zip`
+- Firefox: `ProtPeek-0.1.8-firefox.zip`
+- Firefox reviewer sources: `ProtPeek-0.1.8-sources.zip`
+
+Store publication is separate from these GitHub release packages.
+The shared selection fixes are also released in Zotero 0.1.7.
+
+---
+
+## Version 0.1.7 (included in 0.1.8)
 
 - Rename the browser packages to **ProtPeek – Protein Structure Viewer**, retain
   **ProtPeek** as the short name, and clarify the store summary.

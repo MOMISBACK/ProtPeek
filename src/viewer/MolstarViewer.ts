@@ -43,6 +43,7 @@ import {
 import { imageExportDimensions } from './imageExport';
 import { extractMolstarMetadata } from './molstarMetadata';
 import { atomicResidueLociFromClick } from './molstarInteraction';
+import { schemaForSelection } from './molstarSelection';
 import {
   MolstarComponentTag,
   hasMolstarTag,
@@ -54,21 +55,6 @@ import {
 } from './viewerConfig';
 
 type Subscription = { unsubscribe(): void };
-
-function addSchemaItem(
-  items: StructureElement.SchemaItem[],
-  item: StructureElement.SchemaItem,
-  chainId?: string,
-): void {
-  if (chainId === undefined) {
-    items.push(item);
-    return;
-  }
-  items.push(
-    { ...item, auth_asym_id: chainId },
-    { ...item, label_asym_id: chainId },
-  );
-}
 
 function createSpec(pixelScale: number): PluginSpec {
   return {
@@ -110,33 +96,6 @@ function createSpec(pixelScale: number): PluginSpec {
       [PluginConfig.VolumeStreaming.Enabled, false],
     ],
   };
-}
-
-function schemaForSelection(selection: ViewerSelection): StructureElement.Schema {
-  const items: StructureElement.SchemaItem[] = [];
-  for (const chainId of selection.chains ?? []) {
-    addSchemaItem(items, {}, chainId);
-  }
-  for (const residue of selection.residues ?? []) {
-    addSchemaItem(
-      items,
-      {
-        auth_seq_id: residue.number,
-        ...(residue.insertionCode === undefined
-          ? {}
-          : { pdbx_PDB_ins_code: residue.insertionCode }),
-      },
-      residue.chainId,
-    );
-  }
-  for (const ligand of selection.ligands ?? []) {
-    addSchemaItem(
-      items,
-      { label_comp_id: ligand.compId.toUpperCase() },
-      ligand.chainId,
-    );
-  }
-  return { items };
 }
 
 function waitForFrame(timeoutMs = 1_000): Promise<void> {
@@ -426,7 +385,7 @@ export class MolstarViewer implements StructureViewer {
     this.#plugin.managers.camera.focusLoci(
       StructureElement.Schema.toLoci(
         structure,
-        schemaForSelection({ chains: [chainId] }),
+        schemaForSelection({ chains: [chainId] }, structure),
       ),
       { durationMs: 180 },
     );
@@ -437,7 +396,7 @@ export class MolstarViewer implements StructureViewer {
     if (structure === undefined) return;
     const loci = StructureElement.Schema.toLoci(
       structure,
-      schemaForSelection(selection),
+      schemaForSelection(selection, structure),
     );
     this.#currentLoci = loci;
     this.#plugin.managers.interactivity.lociSelects.selectOnly({ loci }, false);
@@ -483,7 +442,7 @@ export class MolstarViewer implements StructureViewer {
     ) {
       return;
     }
-    const schema = schemaForSelection(selection);
+    const schema = schemaForSelection(selection, structure);
     const loci = StructureElement.Schema.toLoci(structure, schema);
     if (StructureElement.Loci.isEmpty(loci)) return;
 
@@ -729,7 +688,7 @@ export class MolstarViewer implements StructureViewer {
 
     const loci = StructureElement.Schema.toLoci(
       structure,
-      schemaForSelection({ chains: [...this.#hiddenChains] }),
+      schemaForSelection({ chains: [...this.#hiddenChains] }, structure),
     );
     if (StructureElement.Loci.isEmpty(loci)) return;
 
