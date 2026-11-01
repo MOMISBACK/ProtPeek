@@ -1,4 +1,19 @@
-# ProtPeek for Zotero 0.1.7
+# ProtPeek for Zotero 0.1.8
+
+Released on 1 November 2026.
+
+- Use a continuous border for the file-drop area and drag-and-drop overlay.
+- Show supported formats as `PDB / CIF / mmCIF / BCIF / GRO`.
+- Include the approved article-and-protein icon in the plugin and Zotero controls.
+
+Install `protpeek-zotero-0.1.8.xpi` with **Tools → Plugins → Install Plugin
+From File…**. Close and reopen the ProtPeek window after upgrading.
+
+Native Zotero GUI testing for 0.1.8 has not been performed.
+
+---
+
+## ProtPeek for Zotero 0.1.7
 
 Released on 24 October 2026.
 

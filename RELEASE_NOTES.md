@@ -1,4 +1,22 @@
-# ProtPeek browser extensions 0.1.8
+# ProtPeek browser extensions 0.1.9
+
+- Replace the file-drop area's dashed outline with a continuous border, including
+  the drag-and-drop overlay.
+- Separate supported formats with slashes: `PDB / CIF / mmCIF / BCIF / GRO`.
+- Include the approved article-and-protein icon at all extension sizes.
+
+## Packages
+
+- Chrome: `ProtPeek-0.1.9-chrome.zip`
+- Firefox: `ProtPeek-0.1.9-firefox.zip`
+- Firefox reviewer sources: `ProtPeek-0.1.9-sources.zip`
+
+Store publication is separate from these GitHub release packages.
+The shared visual changes are also released in Zotero 0.1.8.
+
+---
+
+## Version 0.1.8
 
 - Resolve chain selections using the chain's author/label identity instead of
   matching both identifier namespaces independently. Crossed mmCIF author and
