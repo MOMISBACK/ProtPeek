@@ -1,4 +1,24 @@
-# ProtPeek browser extensions 0.1.9
+# ProtPeek browser extensions 0.1.10
+
+- Improve toolbar visibility without changing the approved article-and-protein
+  mark or its store icon.
+- Use a thin light keyline for the default toolbar icon on light and dark bars.
+- Supply pale 16/32 pixel Firefox toolbar icons through `action.theme_icons` so
+  Firefox can select them when the toolbar uses light text.
+- Keep toolbar variants separate from the normal store/management icons.
+
+## Packages
+
+- Chrome: `ProtPeek-0.1.10-chrome.zip`
+- Firefox: `ProtPeek-0.1.10-firefox.zip`
+- Firefox reviewer sources: `ProtPeek-0.1.10-sources.zip`
+
+Store publication is separate from these GitHub release packages.
+Zotero remains at 0.1.8; this change concerns browser toolbar buttons.
+
+---
+
+## Version 0.1.9
 
 - Replace the file-drop area's dashed outline with a continuous border, including
   the drag-and-drop overlay.

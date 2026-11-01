@@ -22,3 +22,17 @@ for size in (16, 32, 48, 96, 128):
         Path('public') / f'icon-{size}.png', optimize=True,
     )
 ```
+
+## Toolbar contrast
+
+Toolbar buttons use `public/icon-toolbar-{16,32}.png`: the approved mark with a
+thin light keyline for contrast on both light and dark backgrounds. Firefox
+also receives `icon-toolbar-light-{16,32}.png` through `action.theme_icons`,
+which selects the pale variant when the toolbar uses light text.
+
+Regenerate these variants with `python scripts/generate-toolbar-icons.py`
+(Pillow required). Shape and transparency come directly from the approved
+master. The standard store/management icons are unchanged.
+
+Firefox's `light`/`dark` keys refer to the theme's text/icon colour, not the
+background colour. See [Mozilla's action manifest documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/action#theme_icons).
