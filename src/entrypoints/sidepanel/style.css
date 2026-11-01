@@ -403,7 +403,7 @@ summary {
   justify-content: center;
   padding: clamp(12px, 5vw, 24px);
   overflow-wrap: anywhere;
-  border: 1px dashed var(--drop-border);
+  border: 1px solid var(--drop-border);
   border-radius: 12px;
   background: var(--drop-bg);
   color: var(--text);
@@ -574,7 +574,7 @@ summary {
   inset: 8px;
   display: grid;
   place-items: center;
-  border: 1px dashed var(--accent);
+  border: 1px solid var(--accent);
   border-radius: 7px;
   background: color-mix(in srgb, var(--surface) 91%, transparent);
   color: var(--accent);

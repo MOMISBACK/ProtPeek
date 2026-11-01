@@ -317,7 +317,7 @@ export class ProtPeekApp {
       ]),
       element('span', {
         className: 'dropzone-formats',
-        text: 'PDB · CIF · mmCIF · BCIF · GRO',
+        text: 'PDB / CIF / mmCIF / BCIF / GRO',
       }),
     );
     this.#openError.setAttribute('role', 'alert');
