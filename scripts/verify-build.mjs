@@ -17,6 +17,11 @@ const ICONS = {
   128: 'icon-128.png',
 };
 
+const TOOLBAR_ICONS = {
+  16: 'icon-toolbar-16.png',
+  32: 'icon-toolbar-32.png',
+};
+
 const TARGETS = [
   {
     name: 'Chrome',
@@ -139,8 +144,15 @@ for (const target of TARGETS) {
   );
   checkEqual(target.name, 'icons', manifest.icons, ICONS);
   checkEqual(target.name, 'action', manifest.action, {
-    default_icon: ICONS,
+    default_icon: TOOLBAR_ICONS,
     default_title: 'Open ProtPeek',
+    ...(target.name === 'Firefox' ? {
+      theme_icons: [16, 32].map((size) => ({
+        size,
+        light: `icon-toolbar-light-${size}.png`,
+        dark: `icon-toolbar-${size}.png`,
+      })),
+    } : {}),
   });
   checkEqual(target.name, target.panelKey, manifest[target.panelKey], target.panel);
 

@@ -17,6 +17,11 @@ const ICONS = {
   128: 'icon-128.png',
 };
 
+const TOOLBAR_ICONS = {
+  16: 'icon-toolbar-16.png',
+  32: 'icon-toolbar-32.png',
+};
+
 export default defineConfig({
   srcDir: 'src',
   manifestVersion: 3,
@@ -38,7 +43,14 @@ export default defineConfig({
     description: 'View 3D protein structures while reading papers. Detect PDB IDs and open PDB or mmCIF files in your browser.',
     homepage_url: 'https://github.com/MOMISBACK/ProtPeek',
     action: {
-      default_icon: ICONS,
+      default_icon: TOOLBAR_ICONS,
+      ...(browser === 'firefox' ? {
+        theme_icons: [16, 32].map((size) => ({
+          size,
+          light: `icon-toolbar-light-${size}.png`,
+          dark: `icon-toolbar-${size}.png`,
+        })),
+      } : {}),
       default_title: 'Open ProtPeek',
     },
     icons: ICONS,
