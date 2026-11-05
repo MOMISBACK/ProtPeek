@@ -1,4 +1,17 @@
-# ProtPeek browser extensions 0.1.10
+# ProtPeek browser extensions 0.1.11
+
+- Add a discreet **Share feedback** link below the scan status on the empty
+  Page screen. It opens the feedback form in a new tab.
+
+## Packages
+
+- Chrome `ProtPeek-0.1.11-chrome.zip`
+- Firefox `ProtPeek-0.1.11-firefox.zip`
+- Firefox reviewer sources `ProtPeek-0.1.11-sources.zip`
+
+---
+
+## Version 0.1.10
 
 - Improve toolbar visibility without changing the approved article-and-protein
   mark or its store icon.
