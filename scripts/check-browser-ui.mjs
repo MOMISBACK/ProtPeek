@@ -442,6 +442,27 @@ async function checkExtension(client, origin, target) {
   await reload(client);
   await waitFor(client, 'document.querySelector("#page-tab")?.getAttribute("aria-selected") === "true"', 'default Page tab');
 
+  const feedbackLink = await client.evaluate(`(() => {
+    const link = document.querySelector('.feedback-link');
+    return link && {
+      text: link.textContent,
+      childElements: link.childElementCount,
+      href: link.getAttribute('href'),
+      target: link.target,
+      rel: link.rel,
+      visible: link.getClientRects().length > 0,
+    };
+  })()`);
+  assert.deepEqual(feedbackLink, {
+    text: 'Share feedback',
+    childElements: 0,
+    href: 'https://forms.gle/3JD7BDEsf2x8HQu16',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    visible: true,
+  }, 'The empty Page screen should show a plain-text link to the feedback form');
+  report.checks.push({ name: `${target}-feedback-link-configuration` });
+
   for (const theme of ['light', 'dark']) {
     await client.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }] });
     for (const { width, height } of PANEL_SIZES) {
@@ -449,7 +470,7 @@ async function checkExtension(client, origin, target) {
       for (const section of ['page', 'open']) {
         await click(client, `#${section}-tab`);
         const name = `${target}-${section}-${theme}-${width}x${height}`;
-        await layout(client, name, '.nav-tab, .scan-button, .page-title, .page-subtitle, .scan-result, .identifier-input, .load-button, .dropzone');
+        await layout(client, name, '.nav-tab, .scan-button, .page-title, .page-subtitle, .feedback-link, .scan-result, .identifier-input, .load-button, .dropzone');
         if ([200, 400, 680].includes(width)) await screenshot(client, name);
       }
     }
@@ -485,6 +506,8 @@ async function checkExtension(client, origin, target) {
   await client.call('Emulation.setDeviceMetricsOverride', { width: 200, height: 320, deviceScaleFactor: 1, mobile: false });
   for (const section of ['page', 'open']) {
     await click(client, `#${section}-tab`);
+    assert.equal(await client.evaluate("document.querySelector('.feedback-link')?.getClientRects().length ?? 0"), 0,
+      'Feedback must stay hidden while a structure is open');
     await layout(client, `${target}-loaded-${section}-narrow`, '.nav-tab, .header-action, .identifier-input, .load-button, .dropzone');
   }
   await click(client, '.header-action');

@@ -40,6 +40,7 @@ type Loader = (signal: AbortSignal) => Promise<LoadedStructureData>;
 type PanelSection = 'open' | 'page';
 
 interface ProtPeekAppOptions {
+  feedbackFormUrl?: string;
   notice?: HTMLElement;
   onStructureLoaded?: () => void;
 }
@@ -86,6 +87,7 @@ export class ProtPeekApp {
   readonly #openView = element('section', { className: 'app-page open-view' });
   readonly #pageHero = element('div', { className: 'page-hero' });
   readonly #pageStatus = element('div', { className: 'page-scan-status' });
+  readonly #feedbackLink?: HTMLAnchorElement;
   readonly #pageResults = element('div', { className: 'page-results' });
   readonly #pageResultsHeading = element('div', {
     className: 'page-section-title results-heading',
@@ -167,6 +169,15 @@ export class ProtPeekApp {
   constructor(root: HTMLElement, options: ProtPeekAppOptions = {}) {
     this.#root = root;
     this.#options = options;
+    if (options.feedbackFormUrl !== undefined) {
+      this.#feedbackLink = element('a', {
+        className: 'feedback-link',
+        text: 'Share feedback',
+      });
+      this.#feedbackLink.href = options.feedbackFormUrl;
+      this.#feedbackLink.target = '_blank';
+      this.#feedbackLink.rel = 'noopener noreferrer';
+    }
     this.#backgroundPreference = new ViewerBackgroundPreference(browser.storage.local);
     this.#viewer = new LazyStructureViewer(this.#viewerHost, {
       onContextLost: () => this.#showError('WebGL context was lost. Waiting for recovery…', false),
@@ -267,6 +278,7 @@ export class ProtPeekApp {
       }),
       this.#pageStatus,
     );
+    if (this.#feedbackLink !== undefined) this.#pageHero.append(this.#feedbackLink);
     this.#pageStatus.textContent = initialScan.status;
     this.#pageStatus.setAttribute('role', 'status');
     this.#pageStatus.setAttribute('aria-live', 'polite');
@@ -432,6 +444,9 @@ export class ProtPeekApp {
     setHidden(this.#pageView, section !== 'page');
     setHidden(this.#openView, section !== 'open');
     setHidden(this.#viewerWorkspace, true);
+    if (this.#feedbackLink !== undefined) {
+      setHidden(this.#feedbackLink, this.#hasStructure);
+    }
     for (const [tab, tabSection] of [
       [this.#pageTab, 'page'],
       [this.#openTab, 'open'],

@@ -253,6 +253,23 @@ summary {
   font-size: var(--font-size-label);
 }
 
+.feedback-link {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-control);
+  color: var(--text-muted);
+  font-size: var(--font-size-control);
+  text-decoration: none;
+}
+
+.feedback-link:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
 .page-results {
   margin-top: 8px;
   border-top: 1px solid var(--border);
