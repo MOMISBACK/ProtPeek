@@ -29,6 +29,7 @@ const reviewPrompt = new ReviewPrompt(
   () => browser.tabs.create({ url: reviewUrl }),
 );
 const app = new ProtPeekApp(root, {
+  feedbackFormUrl: 'https://forms.gle/3JD7BDEsf2x8HQu16',
   notice: reviewPrompt.element,
   onStructureLoaded: () => reviewPrompt.recordSuccessfulUse(),
 });
