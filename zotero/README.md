@@ -1,10 +1,10 @@
 # ProtPeek for Zotero
 
-A desktop Zotero plugin built from the same identifier scanner, loaders, UI, and Mol* viewer as the ProtPeek browser extension. Current prototype: version 0.1.8.
+A desktop Zotero plugin built from the same identifier scanner, loaders, UI, and Mol* viewer as the ProtPeek browser extension. Current prototype: version 0.1.9.
 
 ## Installation
 
-1. Download [protpeek-zotero-0.1.8.xpi](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.8/protpeek-zotero-0.1.8.xpi) from the [Zotero 0.1.8 release](https://github.com/MOMISBACK/ProtPeek/releases/tag/zotero-v0.1.8). In Firefox, **right-click → Save Link As…** to download the file rather than trying to install it as a Firefox extension. The download is already an `.xpi`; do not unzip it.
+1. Download [protpeek-zotero-0.1.9.xpi](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.9/protpeek-zotero-0.1.9.xpi) from the [Zotero 0.1.9 release](https://github.com/MOMISBACK/ProtPeek/releases/tag/zotero-v0.1.9). In Firefox, **right-click → Save Link As…** to download the file rather than trying to install it as a Firefox extension. The download is already an `.xpi`; do not unzip it.
 2. In Zotero, open **Tools → Plugins**.
 3. Drag the `.xpi` into the Plugins window, or use **Install Plugin From File…** in its settings menu.
 4. Open a PDF and click **ProtPeek** in the reader toolbar. Alternatively, select a paper and use **Tools → ProtPeek — Protein structures** or the **ProtPeek** section of the item pane.
@@ -19,6 +19,7 @@ For development builds, each successful [CI run](https://github.com/MOMISBACK/Pr
 
 - **Page:** scan the selected paper's local PDF or HTML attachment for contextual PDB, UniProt, and AlphaFold identifiers. PDFs are scanned in full, including pages beyond Zotero's full-text index limit.
 - Click a detected identifier to download and display its structure. Selecting an exact identifier in the PDF also offers an **Open … in ProtPeek** action.
+- Before loading a structure, click **Share feedback** on the **Page** screen to open the feedback form in your system browser. The link does not include paper or structure data.
 - **Open:** enter a PDB, UniProt, or AlphaFold identifier, or load a local `.pdb`, `.cif`, `.mmcif`, `.bcif`, or `.gro` file.
 - Clicking a residue in the sequence populates **Residues**; Ctrl/Cmd-click toggles residues, Shift-click selects ranges, and the input stays synchronized with 3D picks. Typed selections apply only on **Select** or Enter.
 - The chain, sequence, residue, ligand, representation, colour, focus, and Reset view tools are available. Structure download and PNG capture buttons are omitted from the Zotero viewer.
@@ -58,19 +59,19 @@ npm run build:zotero
 npm run verify:zotero
 ```
 
-Output: `release/protpeek-zotero-0.1.8.xpi`. The unpacked package is in `.output/zotero/`. No new npm dependencies were added.
+Output: `release/protpeek-zotero-0.1.9.xpi`. The unpacked package is in `.output/zotero/`. No new npm dependencies were added.
 
-The build aliases `wxt/browser` to a Zotero adapter for the shared UI. Session communication stays in memory; the background choice uses a narrow preference getter/setter. The plugin exposes attachment scanning and this display preference instead of passing the Zotero object into the viewer. Lifecycle cleanup removes controls, unregisters reader hooks and the item-pane section, and closes viewer windows when disabled.
+The build aliases `wxt/browser` to a Zotero adapter for the shared UI. Session communication stays in memory; the background choice uses a narrow preference getter/setter. The viewer bridge exposes attachment scanning, this display preference, and a callback to open the feedback form. Lifecycle cleanup removes controls, unregisters reader hooks and the item-pane section, and closes viewer windows when disabled.
 
 The Zotero entry point also provides a timer-based `setImmediate` implementation before loading Mol*. This avoids Firefox's privileged-window `postMessage` source restriction while keeping the browser-extension build unchanged.
 
 ## Publishing a Zotero release
 
-Update `zotero/manifest.json`, the download links, and [RELEASE_NOTES.md](./RELEASE_NOTES.md) for the new version, then merge the changes into `main`. Push a tag named `zotero-v<version>` at that commit. For version 0.1.8:
+Update `zotero/manifest.json`, the download links, and [RELEASE_NOTES.md](./RELEASE_NOTES.md) for the new version, then merge the changes into `main`. Push a tag named `zotero-v<version>` at that commit. For version 0.1.9:
 
 ```sh
-git tag zotero-v0.1.8
-git push origin zotero-v0.1.8
+git tag zotero-v0.1.9
+git push origin zotero-v0.1.9
 ```
 
 Alternatively, include `[release-zotero]` in the commit or merge message on `main`. CI then creates the matching release tag at that validated commit.

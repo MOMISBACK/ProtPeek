@@ -33,7 +33,10 @@ await build({
 for (const file of ['manifest.json', 'window.xhtml', 'locale']) {
   await cp(join(root, 'zotero', file), join(output, file), { recursive: true });
 }
-for (const file of ['icon-16.png', 'icon-48.png', 'icon-96.png', 'NOTICE.txt', 'THIRD_PARTY_NOTICES.txt']) {
+for (const file of [
+  'icon-toolbar-16.png', 'icon-48.png', 'icon-96.png',
+  'NOTICE.txt', 'THIRD_PARTY_NOTICES.txt',
+]) {
   await cp(join(root, 'public', file), join(output, file));
 }
 await cp(join(root, 'LICENSE'), join(output, 'LICENSE'));

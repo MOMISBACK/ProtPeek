@@ -14,6 +14,11 @@ const bootstrap = await readFile(join(output, 'bootstrap.js'), 'utf8');
 for (const hook of ['startup', 'shutdown', 'onMainWindowLoad', 'onMainWindowUnload']) {
   assert.ok(bootstrap.includes(hook), `Missing lifecycle hook: ${hook}`);
 }
+for (const size of [16, 32]) {
+  const image = await readFile(join(root, 'public', `icon-toolbar-${size}.png`));
+  assert.ok(bootstrap.includes(`data:image/png;base64,${image.toString('base64')}`),
+    `Missing embedded ${size}px reader toolbar icon`);
+}
 const html = await readFile(join(output, 'app/index.html'), 'utf8');
 assert.ok(html.includes('Content-Security-Policy'), 'Viewer CSP missing');
 assert.ok(!/<script[^>]+src=["']https?:/i.test(html), 'Remote executable code');
@@ -26,7 +31,11 @@ import json,sys,zipfile,xml.etree.ElementTree as ET
 with zipfile.ZipFile(sys.argv[1]) as z:
  assert z.testzip() is None, 'ZIP corruption'
  names=z.namelist()
- for required in ['manifest.json','bootstrap.js','window.xhtml','app/index.html','LICENSE','THIRD_PARTY_NOTICES.txt','locale/en-US/protpeek.ftl']:
+ for required in [
+  'manifest.json','bootstrap.js','window.xhtml','app/index.html','LICENSE',
+  'THIRD_PARTY_NOTICES.txt','locale/en-US/protpeek.ftl',
+  'icon-toolbar-16.png',
+ ]:
   assert required in names, 'Missing '+required
  ET.fromstring(z.read('window.xhtml'))
  assert not any(n.startswith('/') or '..' in n.split('/') for n in names)

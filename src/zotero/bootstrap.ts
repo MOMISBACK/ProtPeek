@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
+import readerToolbarIcon from '../../public/icon-toolbar-16.png?inline';
+import readerToolbarIconHighDpi from '../../public/icon-toolbar-32.png?inline';
 import { identifierFromContextMenuSelection } from '../extension/contextMenuSelection';
 import { parseStructureIdentifier } from '../structures/identifiers';
+import { FEEDBACK_FORM_URL } from '../ui/feedback';
 import { resolveArticleAttachment, scanZoteroArticle, isSupportedAttachment } from './article';
 import { createZoteroBackgroundPreference } from './viewerBackgroundPreference';
 import type { ZoteroPreferenceHost } from './viewerBackgroundPreference';
@@ -28,6 +31,7 @@ interface ZoteroPluginHost extends ZoteroArticleHost {
   initializationPromise: Promise<void>;
   getMainWindow(): ZoteroWindow | undefined;
   getMainWindows(): ZoteroWindow[];
+  launchURL(url: string): void;
   logError(error: unknown): void;
   Reader: {
     getByTabID(id: string): { itemID: number } | undefined;
@@ -56,6 +60,7 @@ declare const Ci: { amIAddonManagerStartup: unknown };
 
 const PLUGIN_ID = 'protpeek-zotero@momisback.github.io';
 const XHTML = 'http://www.w3.org/1999/xhtml';
+const ITEM_PANE_ICON_URL = 'chrome://protpeek/content/icon-toolbar-16.png';
 const viewers = new Set<Window>();
 const controls = new Map<Element, () => void>();
 let chromeHandle: { destruct(): void } | undefined;
@@ -101,6 +106,7 @@ async function open(itemId?: number, identifier?: string): Promise<Window | unde
     scan: () => attachment === undefined
       ? Promise.resolve({ tabId, title, error, structures: [] })
       : scanZoteroArticle(Zotero, attachment),
+    openFeedbackForm: () => Zotero.launchURL(FEEDBACK_FORM_URL),
     ...createZoteroBackgroundPreference(Zotero.Prefs),
   };
   // A non-modal native window keeps the PDF visible. The original ProtPeek UI
@@ -131,10 +137,19 @@ function openFromControl(itemId?: number, identifier?: string): void {
 function readerToolbar({ reader, doc, append }: ReaderEvent): void {
   const control = doc.createElementNS(XHTML, 'button');
   control.setAttribute('type', 'button');
-  control.textContent = 'ProtPeek';
   control.title = 'Inspect protein structures in this document';
   control.setAttribute('data-protpeek-toolbar', '');
-  control.style.cssText = 'font:inherit;color:inherit;background:transparent;border:0;padding:4px 8px;cursor:pointer;';
+  control.style.cssText = 'font:inherit;color:var(--fill-secondary, inherit);background:transparent;'
+    + 'border:0;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;'
+    + '-moz-window-dragging:no-drag;';
+  const icon = doc.createElementNS(XHTML, 'img');
+  icon.setAttribute('alt', '');
+  icon.setAttribute('width', '16');
+  icon.setAttribute('height', '16');
+  // The reader document cannot load the plugin's chrome:// image directly.
+  icon.setAttribute('src', readerToolbarIcon);
+  icon.setAttribute('srcset', `${readerToolbarIconHighDpi} 2x`);
+  control.append(icon, 'ProtPeek');
   control.addEventListener('click', () => openFromControl(reader.itemID));
   rememberControl(control);
   append(control);
@@ -182,8 +197,8 @@ async function startup({ rootURI }: { rootURI: string }): Promise<void> {
   Zotero.Reader.registerEventListener('renderTextSelectionPopup', selectionPopup, PLUGIN_ID);
   sectionId = Zotero.ItemPaneManager.registerSection({
     paneID: 'protpeek-structures', pluginID: PLUGIN_ID,
-    header: { l10nID: 'protpeek-section-title', icon: `${rootURI}icon-16.png` },
-    sidenav: { l10nID: 'protpeek-section-tooltip', icon: `${rootURI}icon-16.png` },
+    header: { l10nID: 'protpeek-section-title', icon: ITEM_PANE_ICON_URL },
+    sidenav: { l10nID: 'protpeek-section-tooltip', icon: ITEM_PANE_ICON_URL },
     onItemChange: ({ item, setEnabled }) => {
       setEnabled(item !== undefined && (item.isRegularItem() || isSupportedAttachment(item)));
     },

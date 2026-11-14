@@ -12,6 +12,7 @@ import {
 } from '../../browser/sidePanelSession';
 import { ProtPeekApp } from '../../ui/ProtPeekApp';
 import { ReviewPrompt } from '../../ui/components/ReviewPrompt';
+import { FEEDBACK_FORM_URL } from '../../ui/feedback';
 import { ReviewPromptSchedule } from '../../ui/reviewPrompt';
 import { logger } from '../../utils/logger';
 
@@ -29,7 +30,7 @@ const reviewPrompt = new ReviewPrompt(
   () => browser.tabs.create({ url: reviewUrl }),
 );
 const app = new ProtPeekApp(root, {
-  feedbackFormUrl: 'https://forms.gle/3JD7BDEsf2x8HQu16',
+  feedbackFormUrl: FEEDBACK_FORM_URL,
   notice: reviewPrompt.element,
   onStructureLoaded: () => reviewPrompt.recordSuccessfulUse(),
 });

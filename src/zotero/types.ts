@@ -27,12 +27,13 @@ export interface ZoteroScanResult extends ScanPayload {
   title: string;
 }
 
-/** Only a document scan and the single viewer preference reach the viewer. */
+/** Host actions for the document scan, feedback link, and viewer background. */
 export interface ZoteroPanelBridge {
   itemId: number;
   title: string;
   initialIdentifier?: string;
   scan: () => Promise<ZoteroScanResult>;
+  openFeedbackForm: () => void;
   getViewerBackground?: () => ViewerBackground;
   setViewerBackground?: (background: ViewerBackground) => void;
 }

@@ -1,4 +1,20 @@
-# ProtPeek for Zotero 0.1.8
+# ProtPeek for Zotero 0.1.9
+
+- Add the higher-contrast ProtPeek icon to the PDF reader toolbar and item pane.
+- Add a **Share feedback** link below the scan status on the **Page** screen
+  before a structure is loaded. It opens the same feedback form as the browser
+  extensions in the system browser.
+
+Install `protpeek-zotero-0.1.9.xpi` with **Tools → Plugins → Install Plugin
+From File…**. Close and reopen the ProtPeek window after upgrading.
+
+Verified in Zotero 10.0.8 on Linux with the packaged XPI. Both icons loaded
+and the feedback link disappeared after loading a local structure. The click
+test intercepted Zotero's external-browser call and checked the URL.
+
+---
+
+## ProtPeek for Zotero 0.1.8
 
 Released on 1 November 2026.
 

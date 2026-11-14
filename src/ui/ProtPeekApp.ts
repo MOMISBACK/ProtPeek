@@ -41,6 +41,7 @@ type PanelSection = 'open' | 'page';
 
 interface ProtPeekAppOptions {
   feedbackFormUrl?: string;
+  openFeedbackForm?: () => void;
   notice?: HTMLElement;
   onStructureLoaded?: () => void;
 }
@@ -177,6 +178,13 @@ export class ProtPeekApp {
       this.#feedbackLink.href = options.feedbackFormUrl;
       this.#feedbackLink.target = '_blank';
       this.#feedbackLink.rel = 'noopener noreferrer';
+      const openFeedbackForm = options.openFeedbackForm;
+      if (openFeedbackForm !== undefined) {
+        this.#feedbackLink.addEventListener('click', event => {
+          event.preventDefault();
+          openFeedbackForm();
+        });
+      }
     }
     this.#backgroundPreference = new ViewerBackgroundPreference(browser.storage.local);
     this.#viewer = new LazyStructureViewer(this.#viewerHost, {

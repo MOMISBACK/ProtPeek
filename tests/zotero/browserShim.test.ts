@@ -10,6 +10,7 @@ function bridge(): ZoteroPanelBridge {
   return {
     itemId: 11, title: 'Paper', initialIdentifier: '1CRN',
     scan: vi.fn(() => Promise.resolve({ tabId: 11, title: 'Paper', structures: [] })),
+    openFeedbackForm: vi.fn(),
   };
 }
 
