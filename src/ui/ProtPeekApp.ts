@@ -137,12 +137,20 @@ export class ProtPeekApp {
   readonly #dropZone = button('', {
     className: 'dropzone',
   });
-  readonly #pageTab = button('Page', { className: 'nav-tab' });
+  readonly #pageTab = button('Article', { className: 'nav-tab' });
+  readonly #structureCount = element('span', { className: 'structure-count' });
   readonly #openTab = button('Open', { className: 'nav-tab' });
   readonly #header = element('header', { className: 'topbar' });
-  readonly #viewStructureButton = button('View structure', {
-    className: 'header-action',
-  });
+  readonly #viewStructureButton = button('Structure', { className: 'nav-tab' });
+  readonly #footer = element('footer', { className: 'app-footer' });
+  readonly #autoRotateButton = actionIcon(
+    'Auto rotate', 'viewer-button auto-rotate-button',
+    ['M4 10a8 8 0 1 1 2 8', 'M4 4v6h6'],
+  );
+  readonly #expandButton = actionIcon(
+    'Expand viewer', 'viewer-button expand-button',
+    ['M8 4H4v4', 'M16 4h4v4', 'M4 16v4h4', 'M20 16v4h-4'],
+  );
   readonly #coordinator = new LoadCoordinator();
   readonly #benchmarkEnabled =
     import.meta.env.DEV || new URL(location.href).searchParams.has('benchmark');
@@ -153,6 +161,26 @@ export class ProtPeekApp {
   readonly #backgroundPreference: ViewerBackgroundPreference;
   readonly #options: ProtPeekAppOptions;
   #disposed = false;
+  #autoRotate = false;
+  #expanded = false;
+  readonly #onViewerKeyDown = (event: KeyboardEvent): void => {
+    if (!this.#expanded) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.#setExpanded(false);
+      this.#expandButton.focus();
+    } else if (event.key === 'Tab') {
+      const controls = Array.from(this.#viewerFrame.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
+        .filter(control => control.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first && last !== undefined) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last && first !== undefined) {
+        event.preventDefault(); first.focus();
+      }
+    }
+  };
   #activeArticleTabId: number | undefined;
   #activeIdentifierKey: string | undefined;
   #dragDepth = 0;
@@ -248,6 +276,7 @@ export class ProtPeekApp {
   activateArticleTab(tabId: number): void {
     if (this.#activeArticleTabId === tabId) return;
     this.#activeArticleTabId = tabId;
+    this.#setStructureCount(0);
     this.#pageResults.replaceChildren(this.#pageResultsHeading);
     this.#viewerDetectedItems.replaceChildren();
     this.#pageStatus.textContent = 'Scanning this page…';
@@ -259,6 +288,8 @@ export class ProtPeekApp {
   dispose(): void {
     if (this.#disposed) return;
     this.#disposed = true;
+    this.#setExpanded(false);
+    document.removeEventListener('keydown', this.#onViewerKeyDown);
     this.#coordinator.cancel();
     this.#viewer.dispose();
     this.#panel.dispose();
@@ -269,9 +300,14 @@ export class ProtPeekApp {
   }
 
   #build(): void {
-    setHidden(this.#viewStructureButton, true);
-    this.#header.append(this.#viewStructureButton);
-    setHidden(this.#header, true);
+    const brand = element('img', { className: 'app-icon' });
+    brand.src = new URL('../../public/icon-32.png', import.meta.url).href;
+    brand.alt = 'ProtPeek';
+    brand.width = 28;
+    brand.height = 28;
+    this.#header.append(brand);
+    this.#viewStructureButton.disabled = true;
+    this.#setStructureCount(0);
 
     const initialScan = pageScanPresentation(null);
     this.#pageHero.append(
@@ -286,7 +322,7 @@ export class ProtPeekApp {
       }),
       this.#pageStatus,
     );
-    if (this.#feedbackLink !== undefined) this.#pageHero.append(this.#feedbackLink);
+    if (this.#feedbackLink !== undefined) this.#footer.append(this.#feedbackLink);
     this.#pageStatus.textContent = initialScan.status;
     this.#pageStatus.setAttribute('role', 'status');
     this.#pageStatus.setAttribute('aria-live', 'polite');
@@ -375,6 +411,19 @@ export class ProtPeekApp {
     this.#imageButton.addEventListener('click', () => {
       void this.#downloadImage();
     });
+    this.#autoRotateButton.setAttribute('aria-pressed', 'false');
+    this.#autoRotateButton.addEventListener('click', () => {
+      const enabled = !this.#autoRotate;
+      this.#autoRotate = enabled;
+      this.#autoRotateButton.setAttribute('aria-pressed', String(enabled));
+      void this.#runViewerAction(undefined, 'Auto rotation could not be changed',
+        viewer => viewer.setAutoRotate(enabled)).then(success => {
+          if (!success && this.#autoRotate === enabled) this.#stopAutoRotate();
+        });
+    });
+    this.#expandButton.setAttribute('aria-pressed', 'false');
+    this.#expandButton.addEventListener('click', () => this.#setExpanded(!this.#expanded));
+    document.addEventListener('keydown', this.#onViewerKeyDown);
 
     setHidden(this.#dropOverlay, true);
     setHidden(this.#hoverLabel, true);
@@ -383,12 +432,16 @@ export class ProtPeekApp {
     setHidden(this.#resetButton, true);
     setHidden(this.#downloadButton, true);
     setHidden(this.#imageButton, true);
+    setHidden(this.#autoRotateButton, true);
+    setHidden(this.#expandButton, true);
     this.#viewerFrame.setAttribute('aria-label', 'Protein structure viewer');
 
     const viewerActions = element('div', { className: 'viewer-actions' }, [
       this.#downloadButton,
       this.#imageButton,
       this.#resetButton,
+      this.#autoRotateButton,
+      this.#expandButton,
     ]);
     const statusLine = element('div', { className: 'status-line' }, [
       this.#status,
@@ -420,6 +473,13 @@ export class ProtPeekApp {
     );
     setHidden(this.#viewerWorkspace, true);
 
+    this.#viewerWorkspace.id = 'structure-panel';
+    this.#viewerWorkspace.setAttribute('role', 'tabpanel');
+    this.#viewerWorkspace.setAttribute('aria-labelledby', 'structure-tab');
+    this.#pageTab.append(document.createTextNode(' '), this.#structureCount);
+    this.#viewStructureButton.id = 'structure-tab';
+    this.#viewStructureButton.setAttribute('role', 'tab');
+    this.#viewStructureButton.setAttribute('aria-controls', 'structure-panel');
     this.#pageTab.id = 'page-tab';
     this.#pageTab.dataset.section = 'page';
     this.#pageTab.setAttribute('role', 'tab');
@@ -428,58 +488,93 @@ export class ProtPeekApp {
     this.#openTab.dataset.section = 'open';
     this.#openTab.setAttribute('role', 'tab');
     this.#openTab.setAttribute('aria-controls', 'open-panel');
-    const navigation = element('nav', { className: 'bottom-nav' }, [
+    const navigation = element('nav', { className: 'top-nav' }, [
       this.#pageTab,
       this.#openTab,
+      this.#viewStructureButton,
     ]);
     navigation.setAttribute('aria-label', 'ProtPeek sections');
     navigation.setAttribute('role', 'tablist');
 
+    this.#header.append(navigation);
     const shell = element('main', { className: 'protpeek-app' }, [
       this.#header,
       this.#pageView,
       this.#openView,
       this.#viewerWorkspace,
       this.#options.notice,
-      navigation,
+      this.#footer,
     ]);
     this.#root.replaceChildren(shell);
     this.#showSection('page');
   }
 
-  #showSection(section: PanelSection): void {
-    this.#activeSection = section;
-    setHidden(this.#pageView, section !== 'page');
-    setHidden(this.#openView, section !== 'open');
-    setHidden(this.#viewerWorkspace, true);
-    if (this.#feedbackLink !== undefined) {
-      setHidden(this.#feedbackLink, this.#hasStructure);
-    }
+  #syncTabs(section: PanelSection | 'structure'): void {
     for (const [tab, tabSection] of [
-      [this.#pageTab, 'page'],
-      [this.#openTab, 'open'],
+      [this.#pageTab, 'page'], [this.#openTab, 'open'],
+      [this.#viewStructureButton, 'structure'],
     ] as const) {
       const active = tabSection === section;
       tab.classList.toggle('is-active', active);
       tab.setAttribute('aria-selected', String(active));
       tab.tabIndex = active ? 0 : -1;
     }
-    setHidden(this.#viewStructureButton, !this.#hasStructure);
-    setHidden(this.#header, !this.#hasStructure);
+  }
+
+  #showSection(section: PanelSection): void {
+    this.#activeSection = section;
+    this.#stopAutoRotate();
+    this.#setExpanded(false);
+    setHidden(this.#pageView, section !== 'page');
+    setHidden(this.#openView, section !== 'open');
+    setHidden(this.#viewerWorkspace, true);
+    this.#syncTabs(section);
   }
 
   #showViewer(): void {
     setHidden(this.#pageView, true);
     setHidden(this.#openView, true);
     setHidden(this.#viewerWorkspace, false);
-    setHidden(this.#viewStructureButton, true);
-    setHidden(this.#header, true);
+    this.#syncTabs('structure');
     requestAnimationFrame(() => this.#viewer.resize());
   }
 
   #setNavigationBusy(busy: boolean): void {
     this.#pageTab.disabled = busy;
     this.#openTab.disabled = busy;
+    this.#viewStructureButton.disabled = busy || !this.#hasStructure;
+    this.#autoRotateButton.disabled = busy || !this.#hasStructure;
+    this.#expandButton.disabled = busy || !this.#hasStructure;
+  }
+
+  #setStructureCount(count: number): void {
+    this.#structureCount.textContent = String(count);
+    this.#structureCount.setAttribute('aria-label', `${count} structures found`);
+    setHidden(this.#structureCount, count === 0);
+  }
+
+  #stopAutoRotate(): void {
+    this.#autoRotate = false;
+    this.#autoRotateButton.setAttribute('aria-pressed', 'false');
+    // Share the action queue so a pending enable cannot run after this stop.
+    void this.#runViewerAction(undefined, 'Auto rotation could not be stopped',
+      viewer => viewer.setAutoRotate(false));
+  }
+
+  #setExpanded(expanded: boolean): void {
+    if (this.#expanded === expanded) return;
+    this.#expanded = expanded;
+    this.#viewerFrame.classList.toggle('is-expanded', expanded);
+    this.#expandButton.setAttribute('aria-pressed', String(expanded));
+    const label = expanded ? 'Collapse viewer' : 'Expand viewer';
+    this.#expandButton.setAttribute('aria-label', label);
+    this.#expandButton.title = label;
+    for (const node of [this.#header, this.#pageView, this.#openView,
+      this.#footer, this.#viewerDetectedBar, this.#panel.inspector, this.#options.notice]) {
+      if (node !== undefined) node.inert = expanded;
+    }
+    if (expanded) this.#expandButton.focus();
+    requestAnimationFrame(() => this.#viewer.resize());
   }
 
   #bind(): void {
@@ -490,17 +585,19 @@ export class ProtPeekApp {
     }
     this.#pageTab.addEventListener('click', () => this.#showSection('page'));
     this.#openTab.addEventListener('click', () => this.#showSection('open'));
-    for (const tab of [this.#pageTab, this.#openTab]) {
+    const tabs = [this.#pageTab, this.#openTab, this.#viewStructureButton];
+    for (const tab of tabs) {
       tab.addEventListener('keydown', (event) => {
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
-          return;
-        }
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
-        const next =
-          event.key === 'ArrowLeft' || event.key === 'Home'
-            ? this.#pageTab
-            : this.#openTab;
-        this.#showSection(next === this.#pageTab ? 'page' : 'open');
+        const enabled = tabs.filter(candidate => !candidate.disabled);
+        const index = enabled.indexOf(tab);
+        const next = event.key === 'Home' ? enabled[0]
+          : event.key === 'End' ? enabled.at(-1)
+          : enabled[(index + (event.key === 'ArrowLeft' ? -1 : 1) + enabled.length) % enabled.length];
+        if (next === undefined) return;
+        if (next === this.#viewStructureButton) this.#showViewer();
+        else this.#showSection(next === this.#pageTab ? 'page' : 'open');
         next.focus();
       });
     }
@@ -592,6 +689,7 @@ export class ProtPeekApp {
       if (activeTab?.id === undefined) {
         throw new Error('No active tab is available');
       }
+      this.activateArticleTab(activeTab.id);
       const response: unknown = await browser.runtime.sendMessage(
         sidePanelTabActivatedMessage(activeTab.id, this.#windowId),
       );
@@ -659,6 +757,8 @@ export class ProtPeekApp {
   ): Promise<void> {
     const generation = ++this.#loadGeneration;
     this.#viewerActionGeneration += 1;
+    this.#stopAutoRotate();
+    this.#setExpanded(false);
     const replacing = this.#hasStructure;
     const totalStartedAt = performance.now();
     this.#lastLoad = () => this.#beginLoad(label, loader, identifierKey);
@@ -693,6 +793,8 @@ export class ProtPeekApp {
         setHidden(this.#resetButton, true);
         setHidden(this.#downloadButton, true);
         setHidden(this.#imageButton, true);
+        setHidden(this.#autoRotateButton, true);
+        setHidden(this.#expandButton, true);
         const viewerResult = await this.#viewer.load(loaded);
         return {
           ...viewerResult,
@@ -712,6 +814,8 @@ export class ProtPeekApp {
       setHidden(this.#resetButton, false);
       setHidden(this.#downloadButton, false);
       setHidden(this.#imageButton, false);
+      setHidden(this.#autoRotateButton, false);
+      setHidden(this.#expandButton, false);
       this.#lastLoad = undefined;
       this.#options.onStructureLoaded?.();
       this.#recordPerformance(
@@ -985,6 +1089,7 @@ export class ProtPeekApp {
     this.#pageResults.replaceChildren(this.#pageResultsHeading);
     this.#viewerDetectedItems.replaceChildren();
     this.#pageResultsHeading.textContent = presentation.heading;
+    this.#setStructureCount(payload.structures.length);
     for (const structure of payload.structures) {
       const identifierKey = this.#identifierKey(structure.id);
       const result = button('', { className: 'scan-result' });

@@ -1,3 +1,19 @@
+# Browser 0.1.13
+
+- Harmonize light and dark surfaces, text, borders and fields with the blue palette.
+- Use the approved GroEL-only blue-and-white icon.
+- Recognize PDB accessions in Cell-style PDB/EMDB availability statements and parenthesized PDB labels.
+- Align manual rescans with the currently active article before accepting results.
+- Keep the three top tabs, count badge, viewer controls and browser-specific reviews from 0.1.12.
+
+# Browser 0.1.12
+
+- Move Article, Open and Structure to the top and show the current article’s detected-structure count.
+- Apply the blue accent and the original blue ribbon icon.
+- Add native Mol* auto rotation and an expandable viewer with Escape to collapse.
+- Keep Share feedback at the bottom left and link it to reviews for the current browser.
+- Retain the existing article content, loading options and molecular inspection controls.
+
 # ProtPeek browser extensions 0.1.11
 
 - Add a discreet **Share feedback** link below the scan status on the empty

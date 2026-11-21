@@ -11,8 +11,10 @@ const LABEL_SOURCE = '(?:wwPDB|PDB|RCSB(?:\\s+PDB)?|PDBe|Protein\\s+Data\\s+Bank
 const QUALIFIER_SOURCE = '(?:IDs?|identifiers?|accessions?(?:\\s+(?:numbers?|codes?))?|entry|entries|codes?)';
 const SEPARATOR_SOURCE = '(?:[,;]\\s*(?:(?:and|or)\\s+)?|/\\s*|&\\s*|\\b(?:and|or)\\b\\s*)';
 const ANNOTATION_SOURCE = '(?:\\([^()\\r\\n]{0,80}\\)|\\[[^\\[\\]\\r\\n]{0,80}\\])';
+// Match explicit deposition grammar, including the joint PDB/EMDB wording
+// used by cryo-EM papers. Never skip arbitrary prose to reach a later token.
 const CONTEXT_LABEL_PATTERN = new RegExp(
-  `\\b${LABEL_SOURCE}(?:\\s+(?:(?:under|with)\\s+(?:the\\s+)?)?${QUALIFIER_SOURCE})?\\b`,
+  `\\b${LABEL_SOURCE}(?:\\s*\\(\\s*PDB\\s*\\))?(?:\\s+(?:and|&)\\s+EMDB)?(?:\\s+(?:(?:under|with)\\s+(?:the\\s+)?)?${QUALIFIER_SOURCE})?(?![a-z0-9_])`,
   'gi',
 );
 const FIRST_CONTEXT_IDENTIFIER_PATTERN = new RegExp(

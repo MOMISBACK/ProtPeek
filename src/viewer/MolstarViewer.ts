@@ -13,6 +13,7 @@ import {
 } from 'molstar/lib/mol-plugin-state/helpers/structure-overpaint.js';
 import { PluginBehaviors } from 'molstar/lib/mol-plugin/behavior.js';
 import { StructureFocusRepresentation } from 'molstar/lib/mol-plugin/behavior/dynamic/selection/structure-focus-representation.js';
+import { Vec3 } from 'molstar/lib/mol-math/linear-algebra.js';
 import { PluginConfig } from 'molstar/lib/mol-plugin/config.js';
 import { PluginContext } from 'molstar/lib/mol-plugin/context.js';
 import { PluginSpec } from 'molstar/lib/mol-plugin/spec.js';
@@ -292,6 +293,7 @@ export class MolstarViewer implements StructureViewer {
   }
 
   async #clearState(reason: string): Promise<void> {
+    this.setAutoRotate(false);
     this.#plugin.managers.task.requestAbortAll(reason);
     this.#currentLoci = null;
     this.#exportIdentity = undefined;
@@ -638,6 +640,18 @@ export class MolstarViewer implements StructureViewer {
     });
   }
 
+  /** Native trackball spin pauses while the user is dragging the structure. */
+  setAutoRotate(enabled: boolean): void {
+    if (this.#disposed) return;
+    this.#plugin.canvas3d?.setProps({
+      trackball: {
+        animate: enabled
+          ? { name: 'spin', params: { speed: 0.05, axis: Vec3.create(0, 1, 0) } }
+          : { name: 'off', params: {} },
+      },
+    });
+  }
+
   cancelCurrentTask(): void {
     this.#loadGeneration += 1;
     this.#plugin.managers.task.requestAbortAll('Cancelled by user');
@@ -645,6 +659,7 @@ export class MolstarViewer implements StructureViewer {
 
   dispose(): void {
     if (this.#disposed) return;
+    this.setAutoRotate(false);
     this.#disposed = true;
     this.#loadGeneration += 1;
     this.#plugin.managers.task.requestAbortAll('Viewer disposed');

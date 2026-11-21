@@ -17,6 +17,8 @@ const ROOT = resolve(import.meta.dirname, '..');
 const OUTPUT = join(ROOT, '.output/ui-check');
 const FIXTURE = join(ROOT, 'tests/fixtures/minimal.pdb');
 const GRO_FIXTURE = join(ROOT, 'tests/fixtures/minimal-two-frame.gro');
+const CHROME_REVIEWS_URL = 'https://chromewebstore.google.com/detail/protpeek-%E2%80%93-protein-struct/mjiidagjpbabdncmgpabcijgndnbemck/reviews?hl=fr';
+const FIREFOX_REVIEWS_URL = 'https://addons.mozilla.org/firefox/addon/protpeek/reviews/';
 const require = createRequire(import.meta.url);
 const { CIF } = require('molstar/lib/commonjs/mol-io/reader/cif.js');
 const report = {
@@ -28,7 +30,14 @@ const report = {
 
 const extensionStub = `(() => {
   globalThis.__UI_CHECK_DOCUMENT__ = Math.random();
-  const event = () => ({ addListener() {}, removeListener() {} });
+  const event = () => {
+    const listeners = new Set();
+    return {
+      addListener(listener) { listeners.add(listener); },
+      removeListener(listener) { listeners.delete(listener); },
+      emit(...args) { for (const listener of listeners) listener(...args); },
+    };
+  };
   const key = 'protpeek-ui-check-storage';
   const read = () => JSON.parse(localStorage.getItem(key) || '{}');
   const api = {
@@ -432,6 +441,107 @@ async function checkInspector(client, label, requireScroll) {
   report.checks.push({ name: label, ...bounds });
 }
 
+async function checkNavigationAndFooter(client, label) {
+  const bounds = await client.evaluate(`(() => {
+    const navigation = document.querySelector('.top-nav');
+    const footer = document.querySelector('.app-footer');
+    const feedback = footer?.querySelector('.feedback-link');
+    const content = [...document.querySelectorAll('.app-page, .viewer-workspace')]
+      .find(element => !element.hidden);
+    if (!navigation || !footer || !feedback || !content) return null;
+    const nav = navigation.getBoundingClientRect();
+    const foot = footer.getBoundingClientRect();
+    const link = feedback.getBoundingClientRect();
+    const page = content.getBoundingClientRect();
+    return {
+      tabLabels: [...navigation.querySelectorAll('[role=tab]')].map(tab => {
+        const copy = tab.cloneNode(true);
+        copy.querySelector('.structure-count')?.remove();
+        return copy.textContent.trim();
+      }),
+      navigationTop: nav.top, navigationBottom: nav.bottom,
+      contentTop: page.top, footerTop: foot.top, footerBottom: foot.bottom,
+      feedbackLeft: link.left, feedbackBottom: link.bottom,
+      feedbackVisible: link.width > 0 && link.height > 0,
+      viewportHeight: innerHeight,
+    };
+  })()`);
+  assert.ok(bounds, `${label}: missing top navigation, visible content or feedback footer`);
+  assert.deepEqual(bounds.tabLabels, ['Article', 'Open', 'Structure'], `${label}: incorrect navigation tabs`);
+  assert.ok(bounds.navigationTop >= -1 && bounds.navigationTop <= 120,
+    `${label}: navigation must stay at the top of the extension`);
+  assert.ok(bounds.navigationBottom <= bounds.contentTop + 1,
+    `${label}: navigation must precede the content`);
+  assert.equal(bounds.feedbackVisible, true, `${label}: feedback must remain visible`);
+  assert.ok(bounds.feedbackLeft >= -1 && bounds.feedbackLeft <= 25,
+    `${label}: feedback must stay at the left edge of the footer`);
+  assert.ok(bounds.footerTop >= bounds.viewportHeight - 70 && bounds.footerBottom <= bounds.viewportHeight + 1,
+    `${label}: feedback footer must remain at the bottom`);
+  assert.ok(bounds.feedbackBottom <= bounds.viewportHeight + 1,
+    `${label}: feedback is clipped below the viewport`);
+  report.checks.push({ name: `${label}-top-navigation-and-feedback-footer`, ...bounds });
+}
+
+async function checkStructureCount(client, target) {
+  const badge = `document.querySelector('#page-tab .structure-count')`;
+  assert.equal(await client.evaluate(`Boolean(${badge}?.hidden)`), true,
+    'The article structure count must be hidden when no structures were found');
+  await client.evaluate(`globalThis.browser.tabs.onActivated.emit({ tabId: 21, windowId: 1 })`);
+  const structures = [
+    { id: '1crn', displayId: '1CRN', type: 'pdb', format: 'legacy', sources: ['text'] },
+    { id: 'P69905', displayId: 'P69905', type: 'uniprot', sources: ['text'] },
+  ];
+  const emitScan = (tabId, found) => client.evaluate(`globalThis.browser.storage.onChanged.emit({
+    'protpeek.scan.1': { newValue: ${JSON.stringify({ tabId, structures: found })} },
+  }, 'session')`);
+  await emitScan(21, structures);
+  assert.equal(await client.evaluate(`Number(${badge}?.textContent)`), 2,
+    'The badge must count both PDB and protein identifiers found in the article');
+  assert.equal(await client.evaluate(`${badge}?.hidden`), false,
+    'The nonzero article structure count must be visible');
+  await client.evaluate(`globalThis.browser.tabs.onActivated.emit({ tabId: 22, windowId: 1 })`);
+  assert.equal(await client.evaluate(`${badge}?.hidden`), true,
+    'Changing the active article must reset the previous count');
+  await emitScan(21, structures);
+  assert.equal(await client.evaluate(`${badge}?.hidden`), true,
+    'A late scan from the previous article must not restore its count');
+  await emitScan(22, structures.slice(0, 1));
+  assert.equal(await client.evaluate(`Number(${badge}?.textContent)`), 1,
+    'A scan of the new article must update the count');
+  await emitScan(22, []);
+  assert.equal(await client.evaluate(`${badge}?.hidden`), true,
+    'An empty rescan must hide the badge');
+  report.checks.push({ name: `${target}-article-structure-count`, mixedIdentifiers: true, activeTabReset: true, staleScansIgnored: true });
+}
+
+async function checkViewerControls(client, target) {
+  assert.equal(await client.evaluate(`document.querySelector('#structure-tab')?.getAttribute('aria-selected')`), 'true',
+    'Loading a structure must select the Structure tab');
+  assert.equal(await client.evaluate(`document.querySelector('.auto-rotate-button')?.getAttribute('aria-pressed')`), 'false',
+    'Auto rotate must initially be off');
+  await click(client, '.auto-rotate-button');
+  await waitFor(client, `document.querySelector('.auto-rotate-button')?.getAttribute('aria-pressed') === 'true'`, 'enabled auto rotation');
+  await click(client, '.auto-rotate-button');
+  await waitFor(client, `document.querySelector('.auto-rotate-button')?.getAttribute('aria-pressed') === 'false'`, 'stopped auto rotation');
+  await click(client, '.expand-button');
+  await waitFor(client, `document.querySelector('.viewer-frame')?.classList.contains('is-expanded')
+    && document.querySelector('.expand-button')?.getAttribute('aria-pressed') === 'true'`, 'expanded molecular viewer');
+  const expanded = await client.evaluate(`(() => {
+    const rect = document.querySelector('.viewer-frame').getBoundingClientRect();
+    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height, viewportWidth: innerWidth, viewportHeight: innerHeight };
+  })()`);
+  assert.ok(expanded.left >= -1 && expanded.left <= 1 && expanded.top >= -1 && expanded.top <= 1,
+    'Expanded viewer must start at the viewport origin');
+  assert.ok(Math.abs(expanded.width - expanded.viewportWidth) <= 2 && Math.abs(expanded.height - expanded.viewportHeight) <= 2,
+    'Expanded viewer must fill the extension viewport');
+  await client.call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
+  await client.call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' });
+  await waitFor(client, `!document.querySelector('.viewer-frame')?.classList.contains('is-expanded')
+    && document.querySelector('.expand-button')?.getAttribute('aria-pressed') === 'false'`, 'Escape restores the standard viewer');
+  await checkNavigationAndFooter(client, `${target}-viewer-after-expand`);
+  report.checks.push({ name: `${target}-viewer-rotation-and-expansion`, expanded, escapeRestoresLayout: true });
+}
+
 async function checkExtension(client, origin, target) {
   await client.call('Emulation.setDeviceMetricsOverride', { width: 400, height: 900, deviceScaleFactor: 1, mobile: false });
   await client.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
@@ -443,7 +553,7 @@ async function checkExtension(client, origin, target) {
   await waitFor(client, 'document.querySelector("#page-tab")?.getAttribute("aria-selected") === "true"', 'default Page tab');
 
   const feedbackLink = await client.evaluate(`(() => {
-    const link = document.querySelector('.feedback-link');
+    const link = document.querySelector('.app-footer .feedback-link');
     return link && {
       text: link.textContent,
       childElements: link.childElementCount,
@@ -453,15 +563,27 @@ async function checkExtension(client, origin, target) {
       visible: link.getClientRects().length > 0,
     };
   })()`);
-  assert.deepEqual(feedbackLink, {
+  assert.ok(feedbackLink, 'The extension should have a feedback link in its footer');
+  const feedbackUrl = new URL(feedbackLink.href);
+  if (target.startsWith('firefox')) {
+    assert.equal(feedbackLink.href, FIREFOX_REVIEWS_URL, 'Firefox feedback should open its own extension reviews');
+  } else {
+    assert.equal(feedbackUrl.origin, 'https://chromewebstore.google.com', 'Feedback should open Chrome Web Store reviews');
+    assert.ok(feedbackUrl.pathname.endsWith('/mjiidagjpbabdncmgpabcijgndnbemck/reviews'), 'Feedback should open the ProtPeek reviews page');
+    assert.equal(feedbackUrl.searchParams.get('hl'), 'fr', 'Keep the requested review-page language');
+    assert.equal(feedbackUrl.searchParams.has('authuser'), false, 'Do not select a particular signed-in Google account');
+  }
+  assert.deepEqual({ ...feedbackLink, href: undefined }, {
     text: 'Share feedback',
     childElements: 0,
-    href: 'https://forms.gle/3JD7BDEsf2x8HQu16',
+    href: undefined,
     target: '_blank',
     rel: 'noopener noreferrer',
     visible: true,
-  }, 'The empty Page screen should show a plain-text link to the feedback form');
+  }, 'The footer should show a plain-text link to the extension reviews');
   report.checks.push({ name: `${target}-feedback-link-configuration` });
+  await checkNavigationAndFooter(client, `${target}-initial`);
+  await checkStructureCount(client, target);
 
   for (const theme of ['light', 'dark']) {
     await client.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }] });
@@ -471,6 +593,7 @@ async function checkExtension(client, origin, target) {
         await click(client, `#${section}-tab`);
         const name = `${target}-${section}-${theme}-${width}x${height}`;
         await layout(client, name, '.nav-tab, .scan-button, .page-title, .page-subtitle, .feedback-link, .scan-result, .identifier-input, .load-button, .dropzone');
+        await checkNavigationAndFooter(client, name);
         if ([200, 400, 680].includes(width)) await screenshot(client, name);
       }
     }
@@ -479,6 +602,7 @@ async function checkExtension(client, origin, target) {
   await client.call('Emulation.setDeviceMetricsOverride', { width: 400, height: 900, deviceScaleFactor: 1, mobile: false });
   await client.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
   await openFixture(client);
+  await checkViewerControls(client, target);
   await click(client, '.customization-toggle');
   await waitFor(client, 'document.querySelector("[data-background=white]")?.getAttribute("aria-pressed") === "true"', 'default white background');
   await checkSubtleSelections(client, `${target}-background-white-style`);
@@ -497,20 +621,23 @@ async function checkExtension(client, origin, target) {
       await settled(client);
       const name = `${target}-viewer-${theme}-${width}x${height}`;
       await layout(client, name, '.nav-tab, .viewer-actions button, .structure-modes select, .selection-actions button, .view-background-choice, .selection-editor input, .selection-editor select, .selection-palette button');
+      await checkNavigationAndFooter(client, name);
       await checkResiduesLabelLayout(client, `${name}-residues-label`);
       await checkInspector(client, name, width === 200 && height === 320);
       if ([200, 400, 680].includes(width)) await screenshot(client, name);
     }
   }
-  // Navigation back to both tabs must remain usable after the viewer has loaded.
+  // All three top tabs and the feedback footer remain usable after loading.
   await client.call('Emulation.setDeviceMetricsOverride', { width: 200, height: 320, deviceScaleFactor: 1, mobile: false });
   for (const section of ['page', 'open']) {
     await click(client, `#${section}-tab`);
-    assert.equal(await client.evaluate("document.querySelector('.feedback-link')?.getClientRects().length ?? 0"), 0,
-      'Feedback must stay hidden while a structure is open');
-    await layout(client, `${target}-loaded-${section}-narrow`, '.nav-tab, .header-action, .identifier-input, .load-button, .dropzone');
+    assert.ok(await client.evaluate("document.querySelector('.app-footer .feedback-link')?.getClientRects().length ?? 0") > 0,
+      'Feedback must stay visible while a structure is open');
+    await layout(client, `${target}-loaded-${section}-narrow`, '.nav-tab, .feedback-link, .identifier-input, .load-button, .dropzone');
+    await checkNavigationAndFooter(client, `${target}-loaded-${section}-narrow`);
   }
-  await click(client, '.header-action');
+  await click(client, '#structure-tab');
+  assert.equal(await client.evaluate(`document.querySelector('#structure-tab')?.getAttribute('aria-selected')`), 'true');
   await layout(client, `${target}-viewer-restored-narrow`, '.nav-tab, .viewer-actions button, .view-background-choice, .selection-editor input');
   await client.call('Emulation.setDeviceMetricsOverride', { width: 400, height: 900, deviceScaleFactor: 1, mobile: false });
   await click(client, '.viewer-actions .viewer-button[title="Reset view"]');
@@ -550,17 +677,24 @@ async function checkReviewPrompt(client, target) {
       await layout(client, name, '.review-prompt, .review-prompt button, .nav-tab');
       const bounds = await client.evaluate(`(() => {
         const prompt = document.querySelector('.review-prompt').getBoundingClientRect();
-        const navigation = document.querySelector('.bottom-nav').getBoundingClientRect();
+        const navigation = document.querySelector('.top-nav').getBoundingClientRect();
+        const footer = document.querySelector('.app-footer').getBoundingClientRect();
         return {
           clipped: [...document.querySelectorAll('.review-prompt button')].filter(button => {
             const rect = button.getBoundingClientRect();
             return rect.top < prompt.top || rect.bottom > prompt.bottom;
           }).map(button => button.textContent),
-          navigationBottom: navigation.bottom, height: innerHeight,
+          navigationTop: navigation.top, navigationBottom: navigation.bottom,
+          promptTop: prompt.top, promptBottom: prompt.bottom,
+          footerTop: footer.top, footerBottom: footer.bottom, height: innerHeight,
         };
       })()`);
       assert.deepEqual(bounds.clipped, [], `${name}: review actions must be visible without scrolling`);
-      assert.ok(bounds.navigationBottom <= bounds.height + 1, `${name}: bottom navigation must remain visible`);
+      assert.ok(bounds.navigationTop >= -1 && bounds.navigationBottom <= bounds.promptTop + 1,
+        `${name}: top navigation must remain visible above the review prompt`);
+      assert.ok(bounds.promptBottom <= bounds.footerTop + 1 && bounds.footerBottom <= bounds.height + 1,
+        `${name}: the review prompt must not overlap the feedback footer`);
+      await checkNavigationAndFooter(client, name);
       await screenshot(client, name);
     }
   }
@@ -577,8 +711,8 @@ async function checkReviewPrompt(client, target) {
   await click(client, '.review-prompt-primary');
   await waitFor(client, 'document.querySelector(".review-prompt")?.hidden === true', 'review link completion');
   const expected = target.startsWith('firefox')
-    ? 'https://addons.mozilla.org/firefox/addon/protpeek/reviews/'
-    : 'https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck/reviews';
+    ? FIREFOX_REVIEWS_URL
+    : CHROME_REVIEWS_URL;
   assert.equal(await client.evaluate('globalThis.__UI_CHECK_REVIEW_URL__'), expected, 'Correct store review URL');
   await waitFor(client, `JSON.parse(localStorage.getItem('protpeek-ui-check-storage'))['protpeek:review-prompt'].dismissed === true`, 'persistent review dismissal');
   await client.evaluate(seed);

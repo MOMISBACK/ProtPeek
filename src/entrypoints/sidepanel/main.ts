@@ -12,7 +12,7 @@ import {
 } from '../../browser/sidePanelSession';
 import { ProtPeekApp } from '../../ui/ProtPeekApp';
 import { ReviewPrompt } from '../../ui/components/ReviewPrompt';
-import { FEEDBACK_FORM_URL } from '../../ui/feedback';
+import { CHROME_REVIEWS_URL, FIREFOX_REVIEWS_URL } from '../../ui/feedback';
 import { ReviewPromptSchedule } from '../../ui/reviewPrompt';
 import { logger } from '../../utils/logger';
 
@@ -23,14 +23,14 @@ if (root === null) {
 }
 
 const reviewUrl = import.meta.env.BROWSER === 'firefox'
-  ? 'https://addons.mozilla.org/firefox/addon/protpeek/reviews/'
-  : 'https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck/reviews';
+  ? FIREFOX_REVIEWS_URL
+  : CHROME_REVIEWS_URL;
 const reviewPrompt = new ReviewPrompt(
   new ReviewPromptSchedule(browser.storage.local),
   () => browser.tabs.create({ url: reviewUrl }),
 );
 const app = new ProtPeekApp(root, {
-  feedbackFormUrl: FEEDBACK_FORM_URL,
+  feedbackFormUrl: reviewUrl,
   notice: reviewPrompt.element,
   onStructureLoaded: () => reviewPrompt.recordSuccessfulUse(),
 });

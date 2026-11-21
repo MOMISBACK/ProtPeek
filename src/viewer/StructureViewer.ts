@@ -73,5 +73,6 @@ export interface StructureViewer {
     representation: SelectionRepresentation,
   ): Promise<void>;
   setBackground(background: ViewerBackground): void;
+  setAutoRotate(enabled: boolean): void;
   showAll(): Promise<void>;
 }

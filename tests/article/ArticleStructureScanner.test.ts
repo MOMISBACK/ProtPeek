@@ -27,6 +27,10 @@ describe('contextual PDB text detection', () => {
     ['PDB accession number: 1AON', ['1aon']],
     ['PDB accession codes: 1AON and 1GRL', ['1aon', '1grl']],
     ['PDB under accession code 1AON', ['1aon']],
+    ['Protein Data Bank (PDB) under accession code 8ABC', ['8abc']],
+    ['Protein Data Bank ( PDB ): 8ABC', ['8abc']],
+    ['PDB and EMDB under accession codes 7YWY and EMD-14352, respectively.', ['7ywy']],
+    ['Protein Data Bank (PDB) and EMDB under the accession codes 7YWY and EMD-14352.', ['7ywy']],
     ['PDB with accession code 1AON', ['1aon']],
     ['wwPDB entry 1AON', ['1aon']],
     ['Protein Data Bank 8XYZ', ['8xyz']],
@@ -51,6 +55,12 @@ describe('contextual PDB text detection', () => {
     ).toEqual(expected);
   });
 
+  it('finds the deposited PDB structure in the Cell GroEL:CnoX availability statement', () => {
+    const text = 'Coordinates and electron potential maps for the GroEL:CnoX cryo-EM structure ' +
+      'have been deposited in the PDB and EMDB under accession codes 7YWY and EMD-14352, respectively.';
+    expect(ids({ text })).toEqual(['7ywy']);
+  });
+
   it('detects extended identifiers without requiring a label', () => {
     expect(
       ids({
@@ -65,6 +75,9 @@ describe('contextual PDB text detection', () => {
     'The token prefix8XYZsuffix is unrelated.',
     'PDB proteins are discussed before unrelated sample 8XYZ.',
     'PDB database release notes from 2024.',
+    'PDB and EMDB databases discuss the unrelated sample 8ABC.',
+    'Protein Data Bank (PDB) proteins were compared with unrelated sample 8ABC.',
+    'PDB and EMDB under accession codes were assigned to sample 8ABC.',
     'PDB accession numbers were assigned to sample 1AON.',
     'The unrelated sample prefix1AON (PDB) was recorded.',
     'The unrelated sample 1AON_extra (PDB) was recorded.',
