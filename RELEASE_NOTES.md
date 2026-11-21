@@ -1,3 +1,8 @@
+# Browser 0.1.15
+
+- Keep the full sequence visible below the sticky Customize view header in very short panels.
+- Verify the moved selection-style menu during browser layout checks.
+
 # Browser 0.1.14
 
 - Compact Customize view and keep more space for the molecular viewer.

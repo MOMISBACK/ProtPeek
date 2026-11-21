@@ -432,8 +432,9 @@ async function checkInspector(client, label, requireScroll) {
     await settled(client);
     const sequenceVisible = await client.evaluate(`(() => {
       const panel = document.querySelector('.inspector').getBoundingClientRect();
+      const summary = document.querySelector('.customization-toggle').getBoundingClientRect();
       const sequence = document.querySelector('.sequence-scroll').getBoundingClientRect();
-      return sequence.bottom <= panel.bottom + 2 && sequence.top >= panel.top - 2;
+      return sequence.bottom <= panel.bottom + 2 && sequence.top >= Math.max(panel.top, summary.bottom) - 2;
     })()`);
     assert.equal(sequenceVisible, true, `${label}: sequence controls are not reachable by scrolling`);
   }
@@ -634,7 +635,7 @@ async function checkExtension(client, origin, target) {
       await client.call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       await settled(client);
       const name = `${target}-viewer-${theme}-${width}x${height}`;
-      await layout(client, name, '.nav-tab, .viewer-actions button, .structure-modes select, .selection-actions button, .view-background-choice, .selection-editor input, .selection-editor select, .selection-palette button');
+      await layout(client, name, '.nav-tab, .viewer-actions button, .structure-modes select, .selection-actions button, .view-background-choice, .selection-editor input, .selection-controls select, .selection-palette button');
       await checkNavigationAndFooter(client, name);
       await checkResiduesLabelLayout(client, `${name}-residues-label`);
       await checkInspector(client, name, width === 200 && height === 320);

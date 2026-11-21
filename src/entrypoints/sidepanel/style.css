@@ -1336,7 +1336,7 @@ summary {
   }
 
   .inspector {
-    max-height: 36%;
+    max-height: max(96px, 36%);
   }
 }
 
