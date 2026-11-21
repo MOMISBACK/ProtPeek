@@ -3,10 +3,13 @@ package com.protpeek.app;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.SystemClock;
@@ -26,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Bundled WebView and native content-URI integration, with synthetic data only. */
 public final class NativeSmokeTest {
@@ -65,6 +69,30 @@ public final class NativeSmokeTest {
                     + "&& c && c.width>0 && c.height>0 && document.querySelectorAll('.sequence-layer .residue-cell').length>0; })()",
                     45000, "The native content URI did not reach the Mol* viewer");
             assertEquals("false", js(scenario, "Boolean(document.querySelector('.android-load-status[data-error=\"true\"]'))"));
+
+            // Preserve the actual WebView and document when the device rotates.
+            assertEquals("true", js(scenario, "window.__PROTPEEK_ROTATION_SMOKE__ = 'same-document'; true"));
+            AtomicReference<WebView> beforeRotation = new AtomicReference<>();
+            AtomicInteger targetOrientation = new AtomicInteger();
+            scenario.onActivity(activity -> {
+                beforeRotation.set(findWebView(activity.findViewById(android.R.id.content)));
+                int current = activity.getResources().getConfiguration().orientation;
+                int requested = current == Configuration.ORIENTATION_LANDSCAPE
+                        ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+                targetOrientation.set(requested);
+                activity.setRequestedOrientation(requested);
+            });
+            boolean landscape = targetOrientation.get() == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+            awaitJs(scenario, "window.__PROTPEEK_ROTATION_SMOKE__ === 'same-document' "
+                    + "&& document.querySelector('.viewer-frame[data-viewer-state=\"ready\"]') !== null "
+                    + "&& (innerWidth > innerHeight) === " + landscape,
+                    15000, "Rotation recreated the document or lost the loaded viewer");
+            scenario.onActivity(activity -> {
+                assertSame("Rotation must preserve the WebView instance", beforeRotation.get(),
+                        findWebView(activity.findViewById(android.R.id.content)));
+                assertEquals(landscape ? Configuration.ORIENTATION_LANDSCAPE : Configuration.ORIENTATION_PORTRAIT,
+                        activity.getResources().getConfiguration().orientation);
+            });
 
             Bitmap image = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
             assertNotNull(image);

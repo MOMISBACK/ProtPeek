@@ -60,7 +60,14 @@ jobs:
       - name: Install the pinned Android SDK components
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - name: Compile and inspect native packages
-        run: gradle -p android --no-daemon :app:lintRelease :app:testReleaseUnitTest :app:bundleRelease :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest
+        run: |
+          build_status=0
+          gradle -p android --no-daemon :app:lintRelease :app:testReleaseUnitTest :app:bundleRelease :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest || build_status=$?
+          if [ "$build_status" -ne 0 ]; then
+            report=android/app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
+            if [ -f "$report" ]; then cat "$report"; fi
+          fi
+          exit "$build_status"
       - name: Collect unsigned artifacts and verification tools
         run: |
           mkdir -p .output/android-native
