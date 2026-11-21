@@ -74,7 +74,10 @@ public final class NativeSmokeTest {
             // Also exercise an incoming VIEW while the same document is ready.
             assertEquals("true", js(scenario, "window.__PROTPEEK_WARM_IMPORTS__=0; "
                     + "window.addEventListener('protpeek:file-opened',()=>{window.__PROTPEEK_WARM_IMPORTS__++;}); true"));
-            context.startActivity(new Intent(open));
+            // launch() adds CLEAR_TASK to its Intent; never copy that flag into
+            // the warm launch, which must exercise onNewIntent on this Activity.
+            context.startActivity(new Intent(open).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_GRANT_READ_URI_PERMISSION));
             awaitJs(scenario, "window.__PROTPEEK_WARM_IMPORTS__===1 && (" + viewerReady + ")",
                     45000, "The onNewIntent URI did not reach the existing Mol* viewer");
             assertEquals("false", js(scenario, "Boolean(document.querySelector('.android-load-status[data-error=\"true\"]'))"));
