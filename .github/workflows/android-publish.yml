@@ -21,6 +21,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          log-accepted-android-sdk-licenses: false
       - run: sdkmanager 'build-tools;36.0.0'
       - name: Verify hashes and both signatures
         run: python3 scripts/verify-android-release.py
