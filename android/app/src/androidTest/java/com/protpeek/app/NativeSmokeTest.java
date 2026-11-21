@@ -12,6 +12,7 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
@@ -81,6 +82,8 @@ public final class NativeSmokeTest {
             awaitJs(scenario, "window.__PROTPEEK_WARM_IMPORTS__===1 && (" + viewerReady + ")",
                     45000, "The onNewIntent URI did not reach the existing Mol* viewer");
             assertEquals("false", js(scenario, "Boolean(document.querySelector('.android-load-status[data-error=\"true\"]'))"));
+            awaitViewerPaint(scenario);
+            saveScreenshot(context, "native-smoke-portrait.png");
 
             // Preserve the actual WebView and document when the device rotates.
             assertEquals("true", js(scenario, "window.__PROTPEEK_ROTATION_SMOKE__ = 'same-document'; true"));
@@ -106,16 +109,51 @@ public final class NativeSmokeTest {
                         activity.getResources().getConfiguration().orientation);
             });
 
-            Bitmap image = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
-            assertNotNull(image);
-            File screenshots = new File(context.getExternalFilesDir(null), "qa");
-            assertTrue(screenshots.isDirectory() || screenshots.mkdirs());
-            try (FileOutputStream output = new FileOutputStream(new File(screenshots, "native-smoke.png"))) {
-                assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, output));
-            } finally {
-                image.recycle();
-            }
+            awaitViewerPaint(scenario);
+            saveScreenshot(context, "native-smoke.png");
             fixture.delete();
+        }
+    }
+
+    private static void awaitViewerPaint(ActivityScenario<MainActivity> scenario) throws InterruptedException {
+        awaitJs(scenario, "(() => { const c=document.querySelector('.viewer-host canvas'); "
+                + "const host=document.querySelector('.viewer-host')?.getBoundingClientRect(); "
+                + "const frame=document.querySelector('.viewer-frame')?.getBoundingClientRect(); "
+                + "return c && host && frame && host.width>0 && host.height>0 "
+                + "&& Math.abs(host.width-frame.width)<2 && Math.abs(host.height-frame.height)<2 "
+                + "&& Math.abs(c.width/c.height-host.width/host.height)<0.03; })()",
+                15000, "The molecular canvas did not resize with its viewport");
+        assertEquals("true", js(scenario, "window.__PROTPEEK_PAINT_READY__=false; "
+                + "requestAnimationFrame(()=>requestAnimationFrame(()=>{window.__PROTPEEK_PAINT_READY__=true;})); true"));
+        awaitJs(scenario, "window.__PROTPEEK_PAINT_READY__===true", 15000, "The viewer did not draw after layout");
+        CountDownLatch painted = new CountDownLatch(1);
+        scenario.onActivity(activity -> {
+            WebView view = findWebView(activity.findViewById(android.R.id.content));
+            assertNotNull(view);
+            view.postVisualStateCallback(SystemClock.uptimeMillis(), new WebView.VisualStateCallback() {
+                @Override public void onComplete(long requestId) {
+                    if (Build.VERSION.SDK_INT >= 29 && view.isHardwareAccelerated()) {
+                        view.getViewTreeObserver().registerFrameCommitCallback(painted::countDown);
+                    } else {
+                        view.postOnAnimation(() -> view.postOnAnimation(painted::countDown));
+                    }
+                    view.postInvalidateOnAnimation();
+                }
+            });
+        });
+        assertTrue("The resized WebView frame did not reach the compositor", painted.await(20, TimeUnit.SECONDS));
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+    }
+
+    private static void saveScreenshot(Context context, String filename) throws Exception {
+        Bitmap image = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+        assertNotNull(image);
+        File screenshots = new File(context.getExternalFilesDir(null), "qa");
+        assertTrue(screenshots.isDirectory() || screenshots.mkdirs());
+        try (FileOutputStream output = new FileOutputStream(new File(screenshots, filename))) {
+            assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, output));
+        } finally {
+            image.recycle();
         }
     }
 
