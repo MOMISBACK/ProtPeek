@@ -1,6 +1,37 @@
 # Zotero prototype validation
 
-Historical native-check baseline: 0.1.4, verified on 9 October 2026.
+Historical native checks are version-specific; the most recent recorded
+native icon/feedback check is 0.1.9 (see RELEASE_NOTES.md).
+
+## Version 0.1.10 browser-interface alignment
+
+The XPI is built from the shared browser 0.1.16 UI and molecular viewer. It
+includes the blue light/dark palette, GroEL toolbar/icon assets, three top tabs,
+detected-identifier count, Auto rotate, Expand viewer, the Reset view icon and
+persistent Share & feedback link. Zotero routes this link through its external
+URL bridge to the GitHub project page; it does not use browser-store reviews.
+
+Automated checks exercise the existing Zotero HTML menu adapter (pointer and
+keyboard use, programmatic rollback, disabled-state changes, disposal), pinned
+PDF/HTML scans and bridge behaviour, plus the Zotero entry-point composition.
+Package verification checks the bundled shared controls, matching manifest,
+local scripts, icons, XML and ZIP integrity. These checks run without a native
+Zotero GUI and do **not** establish native Zotero 7 or 8 runtime validation.
+The manifest retains its existing desktop Zotero 7–10 API target.
+
+The privileged-window timer adapter still loads before Mol*. Native exports use
+Zotero’s documented `filePicker.mjs` wrapper and the Firefox `IOUtils.write`
+API. The adapter validates the suggested filename, MIME type and PNG data,
+opens Save As, writes only after confirmation and distinguishes creation from
+confirmed replacement. Mocked-host tests cover cancellation, concurrent
+requests, invalid payloads, exact UTF-8/binary bytes, write failure recovery and
+a closed viewer. The shared application tests cover callback delegation and
+save failures; the Zotero entry-point tests check both save callbacks and menu
+cleanup. These checks do not establish real platform file-dialog behaviour or
+actual native filesystem export success.
+
+The plugin update feed remains deliberately empty for manual updates. No browser-extension or Android behaviour is changed by
+this Zotero-specific release.
 
 ## Version 0.1.7 selection precision fixes
 
@@ -134,3 +165,15 @@ box reconstruction are outside this release's support.
 - OCR, EPUB, and password-protected PDF extraction are not verified features. Missing local files and empty extractable text have explicit fallback messages.
 
 This is an installable prototype, with the above limits recorded for review.
+
+
+## Native export API references (0.1.10)
+
+- [Zotero 7 developer changes](https://www.zotero.org/support/dev/zotero_7_for_developers):
+  privileged file I/O uses IOUtils, and FilePicker is imported from
+  `chrome://zotero/content/modules/filePicker.mjs`.
+- [Official FilePicker implementation](https://github.com/zotero/zotero/blob/main/chrome/content/zotero/modules/filePicker.mjs):
+  asynchronous Save As with `modeSave`, `returnOK`, `returnReplace`, and a selected path.
+- [Firefox IOUtils migration guide](https://firefox-source-docs.mozilla.org/dom/ioutils_migration.html):
+  `mode: 'create'` refuses to replace a file; `mode: 'overwrite'` is used only after
+  FilePicker confirms replacement.

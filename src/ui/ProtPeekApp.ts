@@ -45,6 +45,8 @@ interface ProtPeekAppOptions {
   openFeedbackForm?: () => void;
   sharePageUrl?: string;
   openSharePage?: () => void;
+  saveStructure?: (exported: StructureExport) => Promise<void>;
+  saveImage?: (exported: StructureImageExport) => Promise<void>;
   notice?: HTMLElement;
   onStructureLoaded?: () => void;
 }
@@ -978,6 +980,14 @@ export class ProtPeekApp {
         },
       );
       if (!completed || exported === undefined) return;
+      if (this.#options.saveStructure !== undefined) {
+        try { await this.#options.saveStructure(exported); }
+        catch (error: unknown) {
+          this.#showError('The structure could not be saved', false);
+          logger.warn('Could not save the structure through the host', error);
+        }
+        return;
+      }
 
       const url = URL.createObjectURL(
         new Blob([exported.text], { type: exported.mimeType }),
@@ -1011,6 +1021,14 @@ export class ProtPeekApp {
         },
       );
       if (!completed || exported === undefined) return;
+      if (this.#options.saveImage !== undefined) {
+        try { await this.#options.saveImage(exported); }
+        catch (error: unknown) {
+          this.#showError('The image could not be saved', false);
+          logger.warn('Could not save the image through the host', error);
+        }
+        return;
+      }
 
       const anchor = element('a');
       anchor.href = exported.dataUrl;

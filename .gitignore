@@ -7,3 +7,13 @@ dist/
 .DS_Store
 release/*.zip
 release/*.xpi
+
+# Android generated files and private signing material
+android/.gradle/
+android/**/build/
+android/local.properties
+android/app/src/main/assets/www/
+*.jks
+*.keystore
+*.p12
+__pycache__/

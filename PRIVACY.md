@@ -1,14 +1,22 @@
 # ProtPeek privacy policy
 
-Last updated: 19 October 2026
+Last updated: 21 November 2026
 
 ProtPeek does not operate a backend and does not include analytics, advertising, telemetry, user accounts, or profiling.
+
+## Android prototype
+
+Search terms and optional organism filters are sent only after an explicit Search action to the public providers used for that query: UniProt (`rest.uniprot.org`), RCSB (`search.rcsb.org`, `data.rcsb.org`), Europe PMC (`www.ebi.ac.uk`) and AlphaFold DB (`alphafold.ebi.ac.uk`). Opening a remote structure uses the RCSB/AlphaFold file endpoints described below. Those providers receive the user's network request; no ProtPeek server intermediates it.
+
+Local structure files are read on the device through Android's document picker or an explicit Open with/Share action. They are not uploaded. Native PNG/mmCIF exports are written to a chosen document location or temporarily cached for the Android share sheet, which grants the selected recipient access to that file. Temporary shared files are cleaned up by the app.
+
+Recent remote identifiers, titles and display preferences are stored locally in the app's WebView storage. Recent items do not imply an offline copy of the structure. The app has no account, advertising or analytics service. Opening external source links uses another app/browser at the user's request.
 
 ## Zotero desktop plugin
 
 The Zotero prototype reads the selected paper's local attachment and limited reference metadata to detect identifiers on the computer. It does not upload document text, annotations, library records, or local structure files, and does not modify references or annotations.
 
-The Zotero viewer saves its white or black background choice in a namespaced local Zotero preference. This contains no article text or structure history. No preference or filesystem API is exposed to the viewer beyond reading and saving this display choice.
+The Zotero viewer saves its white or black background choice in a namespaced local Zotero preference. This contains no article text or structure history. Native PNG and mmCIF exports open Zotero's Save As dialog; the host validates the requested format and filename and writes only to the location the user chooses. The viewer has no general filesystem browsing or arbitrary file-reading API.
 
 Remote structures are fetched only after an explicit Open action, using the same providers described below. Zotero may independently contact `raw.githubusercontent.com` to check the plugin's update metadata. This prototype's update feed is empty and updates are manual. Update checks do not include paper content or library records. Zotero's own synchronization and other networking remain separate from ProtPeek.
 

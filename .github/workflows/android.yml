@@ -1,0 +1,142 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Android prototype
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '!android/releases/**'
+      - 'src/android/**'
+      - 'src/search/**'
+      - 'src/viewer/**'
+      - 'src/structures/**'
+      - 'src/sequence/**'
+      - 'src/ui/components/**'
+      - 'src/entrypoints/sidepanel/style.css'
+      - 'public/**'
+      - 'scripts/*android*'
+      - 'package*.json'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'src/android/**'
+      - 'src/search/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build:android:web
+      - run: npm run verify:android:web
+      - name: Check mobile viewer and search UI
+        run: node scripts/check-android-web.mjs
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.13'
+      - name: Install the pinned Android SDK components
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Compile and inspect native packages
+        run: gradle -p android --no-daemon :app:lintRelease :app:testReleaseUnitTest :app:bundleRelease :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Collect unsigned artifacts and verification tools
+        run: |
+          mkdir -p .output/android-native
+          cp android/app/build/outputs/bundle/release/app-release.aab .output/android-native/
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk .output/android-native/
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" .output/android-native/
+          curl --fail --location --retry 3 https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar --output .output/android-native/bundletool.jar
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path('.output/android-native')
+          actual = hashlib.sha256((root / 'bundletool.jar').read_bytes()).hexdigest()
+          assert actual == 'a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29', 'Unexpected bundletool checksum'
+          info = {'sourceCommit': os.environ['GITHUB_SHA'], 'workflowRun': os.environ['GITHUB_RUN_ID'], 'signed': False,
+                  'sha256': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in root.iterdir() if p.is_file()}}
+          (root / 'build-info.json').write_text(json.dumps(info, indent=2) + '\n')
+          PY
+          java -jar .output/android-native/bundletool.jar validate --bundle .output/android-native/app-release.aab
+      - uses: actions/upload-artifact@v7
+        with:
+          name: protpeek-android-unsigned
+          path: .output/android-native/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7
+        with:
+          name: protpeek-android-test-apks
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: protpeek-android-web-check
+          path: .output/android-ui-check/
+          if-no-files-found: warn
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: protpeek-android-test-apks
+          path: .output/android-test-apks
+      - name: Enable emulator acceleration
+        run: |
+          printf '%s\n' 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run on Android WebView
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          ram-size: 3072M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            set -e
+            mkdir -p .output/android-emulator
+            APP_APK=$(find .output/android-test-apks -name app-debug.apk -print -quit)
+            TEST_APK=$(find .output/android-test-apks -name app-debug-androidTest.apk -print -quit)
+            adb install -r "$APP_APK"
+            adb install -r "$TEST_APK"
+            adb shell am instrument -w com.protpeek.app.test/androidx.test.runner.AndroidJUnitRunner | tee .output/android-emulator/instrumentation.txt
+            grep -E 'OK \([0-9]+ tests?\)' .output/android-emulator/instrumentation.txt
+            adb pull /sdcard/Android/data/com.protpeek.app/files/qa/ .output/android-emulator/ || true
+            adb logcat -d > .output/android-emulator/logcat.txt
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: protpeek-android-emulator-check
+          path: .output/android-emulator/
+          if-no-files-found: warn

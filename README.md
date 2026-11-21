@@ -2,13 +2,15 @@
 
 **View protein structures without leaving the paper you're reading.**
 
-ProtPeek is a free, open-source protein-structure viewer for Firefox, Chromium, and Zotero desktop. It detects structural identifiers in scientific articles and opens the corresponding structures in the browser side panel or a Zotero viewer window.
+ProtPeek is a free, open-source protein-structure viewer for Firefox, Chromium, Zotero desktop and Android. The browser and Zotero versions detect structural identifiers in scientific articles. The Android prototype searches protein, gene and publication metadata and opens structures in a mobile viewer.
 
 It is intended for quick inspection while reading, not as a replacement for PyMOL, ChimeraX, Coot, or other full molecular-modelling tools.
 
-[Browser release 0.1.10](https://github.com/MOMISBACK/ProtPeek/releases/tag/browser-v0.1.10) · [Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.9/protpeek-zotero-0.1.9.xpi) · [Privacy](https://momisback.github.io/ProtPeek/privacy/)
+[Browser release 0.1.16](https://github.com/MOMISBACK/ProtPeek/releases/tag/browser-v0.1.16) · [Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.10/protpeek-zotero-0.1.10.xpi) · [Android prototype](./android/README.md) · [Privacy](./PRIVACY.md)
 
-The Zotero plugin is an installable prototype (0.1.9), with local GROMACS GRO support, improved PDB detection, harmonized typography, and a saved white/black viewer background. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
+The Zotero plugin is an installable prototype (0.1.10), with the shared blue interface and GroEL icon, top navigation, native rotation/expanded view, and native PNG/mmCIF Save As exports. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
+
+The Android prototype (0.1.0) has a central search for genes, proteins, UniProt/PDB/AlphaFold identifiers, article titles, DOI and PMID. It separates experimental structures from predicted models and checks exact protein/publication associations. Local structure files, touch controls, customization and native PNG/mmCIF save/share are supported. Recent items contain remote identifiers and metadata, not an offline copy of every structure. See the [Android build, signing and limitations](./android/README.md).
 
 ![ProtPeek showing PDB 1AON](./store-assets/protpeek-640x400.png)
 

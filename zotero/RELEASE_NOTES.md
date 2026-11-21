@@ -1,3 +1,29 @@
+# ProtPeek for Zotero 0.1.10
+
+- Bring the Zotero viewer up to the browser 0.1.16 interface: the blue light/dark
+  palette, GroEL icon, top **Article / Open / Structure** tabs and detected-ID count.
+- Add the shared **Auto rotate** and **Expand viewer** controls, with Escape to
+  collapse, and the compact Reset view icon.
+- Keep **Share & feedback** at the bottom left. It opens the ProtPeek GitHub
+  project in the system browser, rather than Chrome or Firefox review pages.
+- Restore browser-equivalent **Download structure** (PDBx/mmCIF) and **Save image**
+  (PNG) through Zotero’s native Save As dialog. Cancelling does not write a file;
+  replacing an existing file requires confirmation in the system dialog.
+- Retain Zotero's HTML display menus, local PDF/HTML scanning, file formats,
+  sequence/residue selection and saved White/Black background preference.
+
+Install `protpeek-zotero-0.1.10.xpi` with **Tools → Plugins → Install Plugin
+From File…**. Close and reopen the ProtPeek window after upgrading. The update
+feed remains manual; this release does not enable automatic plugin updates.
+
+Automated menu/bridge/entry-point checks and XPI package verification cover this
+release. Native Zotero 7/8/10 GUI behaviour for 0.1.10 has not been re-tested.
+Native file-dialog rendering and real filesystem exports for 0.1.10 have not
+been exercised in a Zotero GUI; the export adapter is covered by mocked-host
+regression tests.
+
+---
+
 # ProtPeek for Zotero 0.1.9
 
 - Add the higher-contrast ProtPeek icon to the PDF reader toolbar and item pane.

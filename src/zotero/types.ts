@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 import type { ScanPayload } from '../browser/sessionPayloads';
+import type { StructureExport, StructureImageExport } from '../viewer/StructureViewer';
 import type { ViewerBackground } from '../viewer/StructureViewer';
 
 /** The small, read-only slice of Zotero used by ProtPeek. */
@@ -33,8 +34,11 @@ export interface ZoteroPanelBridge {
   title: string;
   initialIdentifier?: string;
   scan: () => Promise<ZoteroScanResult>;
+  /** Legacy external-link callback retained for older panel bridges. */
   openFeedbackForm: () => void;
   openSharePage?: () => void;
+  saveStructure?: (exported: StructureExport) => Promise<void>;
+  saveImage?: (exported: StructureImageExport) => Promise<void>;
   getViewerBackground?: () => ViewerBackground;
   setViewerBackground?: (background: ViewerBackground) => void;
 }

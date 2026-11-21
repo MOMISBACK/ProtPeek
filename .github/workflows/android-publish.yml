@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Publish signed Android prototype
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/releases/release.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Verify hashes and both signatures
+        run: python3 scripts/verify-android-release.py
+      - name: Read the verified release version
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          data = json.loads(pathlib.Path('android/releases/release.json').read_text())
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write(f"ANDROID_VERSION={data['versionName']}\n")
+          PY
+      - name: Publish signed APK and AAB
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "android-v${ANDROID_VERSION}" \
+            "android/releases/ProtPeek-Android-${ANDROID_VERSION}.aab" \
+            "android/releases/ProtPeek-Android-${ANDROID_VERSION}.apk" \
+            android/releases/release.json \
+            --target "$GITHUB_SHA" \
+            --title "ProtPeek Android ${ANDROID_VERSION} — prototype" \
+            --notes-file android/RELEASE_NOTES.md --prerelease --latest=false

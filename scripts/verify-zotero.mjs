@@ -25,6 +25,18 @@ assert.ok(!/<script[^>]+src=["']https?:/i.test(html), 'Remote executable code');
 for (const match of html.matchAll(/(?:src|href)="(\.\/assets\/[^"#]+)"/g)) {
   await stat(join(output, 'app', match[1]));
 }
+const viewerScript = [...html.matchAll(/<script[^>]+src="(\.\/assets\/[^"#]+\.js)"/g)]
+  .map(match => join(output, 'app', match[1]));
+assert.ok(viewerScript.length > 0, 'Bundled Zotero viewer entry point missing');
+const viewerCode = (await Promise.all(viewerScript.map(path => readFile(path, 'utf8')))).join('\n');
+for (const control of ['top-nav', 'structure-tab', 'structure-count', 'auto-rotate-button', 'expand-button', 'reset-view-button', 'Share & feedback']) {
+  assert.ok(viewerCode.includes(control), `Missing shared browser UI control: ${control}`);
+}
+assert.ok(viewerCode.includes('saveStructure') && viewerCode.includes('saveImage'), 'Native export callbacks missing from Zotero viewer');
+assert.ok(bootstrap.includes('chrome://zotero/content/modules/filePicker.mjs'), 'Native Zotero Save As wrapper missing');
+assert.ok(bootstrap.includes('IOUtils.write'), 'Native Zotero file writer missing');
+assert.ok(!bootstrap.includes('chromewebstore.google.com') && !bootstrap.includes('forms.gle'), 'Zotero links must not open browser-store reviews or the old form');
+
 const archive = join(root, 'release', `protpeek-zotero-${manifest.version}.xpi`);
 const result = execFileSync('python3', ['-c', `
 import json,sys,zipfile,xml.etree.ElementTree as ET
@@ -37,10 +49,13 @@ with zipfile.ZipFile(sys.argv[1]) as z:
   'icon-toolbar-16.png',
  ]:
   assert required in names, 'Missing '+required
+ assert json.loads(z.read('manifest.json')) == json.load(open(sys.argv[2])), 'Packaged manifest differs from source'
+ for icon in ['icon-toolbar-16.png','icon-48.png','icon-96.png']:
+  assert z.read(icon) == open(sys.argv[3]+'/'+icon,'rb').read(), 'Packaged icon differs from approved source: '+icon
  ET.fromstring(z.read('window.xhtml'))
  assert not any(n.startswith('/') or '..' in n.split('/') for n in names)
  assert any('MolstarViewer' in n for n in names), 'Mol* is not bundled'
  assert not any('node_modules' in n or '.map' == n[-4:] for n in names)
  print(json.dumps({'files':len(names),'bytes':sum(i.file_size for i in z.infolist())}))
-`, archive], { encoding: 'utf8' });
+`, archive, join(root, 'zotero/manifest.json'), join(root, 'public')], { encoding: 'utf8' });
 process.stdout.write(`Verified Zotero package: ${result}`);

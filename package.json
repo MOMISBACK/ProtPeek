@@ -33,7 +33,10 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "prepare": "wxt prepare"
+    "prepare": "wxt prepare",
+    "build:android:web": "node scripts/build-android-web.mjs",
+    "verify:android:web": "node scripts/verify-android-web.mjs",
+    "check:android:web": "node scripts/check-android-web.mjs"
   },
   "dependencies": {
     "molstar": "5.11.0"

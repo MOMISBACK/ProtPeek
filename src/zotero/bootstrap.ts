@@ -3,8 +3,10 @@ import readerToolbarIcon from '../../public/icon-toolbar-16.png?inline';
 import readerToolbarIconHighDpi from '../../public/icon-toolbar-32.png?inline';
 import { identifierFromContextMenuSelection } from '../extension/contextMenuSelection';
 import { parseStructureIdentifier } from '../structures/identifiers';
-import { FEEDBACK_FORM_URL, ZOTERO_SHARE_PAGE_URL } from '../ui/feedback';
+import { ZOTERO_SHARE_PAGE_URL } from '../ui/feedback';
 import { resolveArticleAttachment, scanZoteroArticle, isSupportedAttachment } from './article';
+import { createZoteroExportActions } from './nativeExport';
+import type { ZoteroFilePicker } from './nativeExport';
 import { createZoteroBackgroundPreference } from './viewerBackgroundPreference';
 import type { ZoteroPreferenceHost } from './viewerBackgroundPreference';
 import type { ZoteroArticleHost, ZoteroItem, ZoteroPanelBridge } from './types';
@@ -52,6 +54,10 @@ interface ZoteroPluginHost extends ZoteroArticleHost {
 }
 
 declare const Zotero: ZoteroPluginHost;
+declare const ChromeUtils: { importESModule(url: string): { FilePicker: new () => ZoteroFilePicker } };
+declare const IOUtils: {
+  write(path: string, data: Uint8Array, options: { mode: 'create' | 'overwrite' }): Promise<number>;
+};
 declare const Services: { io: { newURI(url: string): unknown } };
 declare const Cc: Record<string, { getService(type: unknown): {
   registerChrome(uri: unknown, entries: string[][]): { destruct(): void };
@@ -99,6 +105,16 @@ async function open(itemId?: number, identifier?: string): Promise<Window | unde
   if (!alive || owner.closed) return undefined;
   const tabId = attachment?.id ?? itemId ?? 0;
   const title = attachment?.getField('title') || 'No readable document selected';
+  let exportWindow: Window = owner;
+  const exportActions = createZoteroExportActions({
+    createPicker: () => {
+      const { FilePicker } = ChromeUtils.importESModule('chrome://zotero/content/modules/filePicker.mjs');
+      return new FilePicker();
+    },
+    decodeBase64: value => exportWindow.atob(value),
+    encodeUTF8: value => new TextEncoder().encode(value),
+    write: (path, data, options) => IOUtils.write(path, data, options),
+  }, () => exportWindow);
   const bridge: ZoteroPanelBridge = {
     itemId: tabId,
     title,
@@ -106,9 +122,12 @@ async function open(itemId?: number, identifier?: string): Promise<Window | unde
     scan: () => attachment === undefined
       ? Promise.resolve({ tabId, title, error, structures: [] })
       : scanZoteroArticle(Zotero, attachment),
-    openFeedbackForm: () => Zotero.launchURL(FEEDBACK_FORM_URL),
+    // Retain the legacy callback name for older viewer bridges; both actions
+    // now open the Zotero project page, never a browser-extension review page.
+    openFeedbackForm: () => Zotero.launchURL(ZOTERO_SHARE_PAGE_URL),
     openSharePage: () => Zotero.launchURL(ZOTERO_SHARE_PAGE_URL),
     ...createZoteroBackgroundPreference(Zotero.Prefs),
+    ...exportActions,
   };
   // A non-modal native window keeps the PDF visible. The original ProtPeek UI
   // and Mol* run in its local iframe, with only this narrow bridge.
@@ -118,6 +137,7 @@ async function open(itemId?: number, identifier?: string): Promise<Window | unde
     'chrome,centerscreen,resizable,dialog=no,width=520,height=820',
     bridge,
   );
+  exportWindow = viewer;
   viewers.add(viewer);
   // openDialog can unload its initial about:blank document before our window
   // loads. Only remove the viewer when the actual top-level document unloads.

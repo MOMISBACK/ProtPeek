@@ -1,0 +1,53 @@
+plugins {
+    id 'com.android.application'
+}
+
+def releaseVersion = new Properties()
+rootProject.file('version.properties').withInputStream { releaseVersion.load(it) }
+
+android {
+    namespace releaseVersion.getProperty('applicationId')
+    compileSdk 36
+
+    defaultConfig {
+        applicationId releaseVersion.getProperty('applicationId')
+        minSdk 26
+        targetSdk 36
+        versionCode releaseVersion.getProperty('versionCode').toInteger()
+        versionName releaseVersion.getProperty('versionName')
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures { buildConfig true }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Release signing is deliberately performed outside the repository.
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.16.0'
+    implementation 'androidx.core:core:1.16.0'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'junit:junit:4.13.2'
+}
+
+tasks.register('verifyWebAssets') {
+    doLast {
+        def entry = file('src/main/assets/www/index.html')
+        if (!entry.isFile()) {
+            throw new GradleException('Missing bundled web app. Run npm run build:android:web from the repository root first.')
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyWebAssets' }
+

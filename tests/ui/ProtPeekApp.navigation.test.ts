@@ -103,7 +103,11 @@ describe('ProtPeekApp navigation and viewer controls', () => {
     root = required(document, '#app');
     autoRotate = vi.fn<(enabled: boolean) => void>();
     resetCamera = vi.fn<() => void>();
-    const currentViewer = { setAutoRotate: autoRotate, cancelCurrentTask: vi.fn(), resetCamera } as unknown as StructureViewer;
+    const currentViewer = {
+      setAutoRotate: autoRotate, cancelCurrentTask: vi.fn(), resetCamera,
+      exportCurrentStructure: () => ({ filename: '1crn.cif', mimeType: 'chemical/x-cif', text: 'data_1crn\n' }),
+      exportCurrentImage: async () => ({ filename: '1crn.png', mimeType: 'image/png', dataUrl: 'data:image/png;base64,iVBORw0KGgo=' }),
+    } as unknown as StructureViewer;
     const fakeViewer = {
       prepare: vi.fn(async () => undefined),
       load: vi.fn(async () => result),
@@ -242,6 +246,35 @@ describe('ProtPeekApp navigation and viewer controls', () => {
     required<HTMLButtonElement>(root, '#structure-tab').click();
     expect(rotate.getAttribute('aria-pressed')).toBe('false');
     expect(required<HTMLElement>(root, '#structure-panel').hidden).toBe(false);
+  });
+
+  it('delegates structure and PNG exports to optional native host callbacks', async () => {
+    const saveStructure = vi.fn(async () => undefined), saveImage = vi.fn(async () => undefined);
+    await mount(true, { saveStructure, saveImage });
+    const objectURL = vi.spyOn(URL, 'createObjectURL');
+    required<HTMLButtonElement>(root, '.download-button').click();
+    await flushActions();
+    expect(saveStructure).toHaveBeenCalledWith({
+      filename: '1crn.cif', mimeType: 'chemical/x-cif', text: 'data_1crn\n',
+    });
+    expect(objectURL).not.toHaveBeenCalled();
+    required<HTMLButtonElement>(root, '.image-button').click();
+    await flushActions();
+    expect(saveImage).toHaveBeenCalledWith({
+      filename: '1crn.png', mimeType: 'image/png', dataUrl: 'data:image/png;base64,iVBORw0KGgo=',
+    });
+    expect(required<HTMLButtonElement>(root, '.download-button').disabled).toBe(false);
+    expect(required<HTMLButtonElement>(root, '.image-button').disabled).toBe(false);
+    objectURL.mockRestore();
+  });
+
+  it('shows native save failures and restores the export controls', async () => {
+    await mount(true, { saveImage: vi.fn(async () => { throw new Error('Disk full'); }) });
+    required<HTMLButtonElement>(root, '.image-button').click();
+    await flushActions();
+    expect(required<HTMLElement>(root, '.error-box').hidden).toBe(false);
+    expect(required(root, '.error-box').textContent).toContain('The image could not be saved');
+    expect(required<HTMLButtonElement>(root, '.image-button').disabled).toBe(false);
   });
 
   it('expands reversibly, isolates background controls, and restores them on Escape', async () => {
