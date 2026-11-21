@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   publish:
@@ -25,8 +26,32 @@ jobs:
         with:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager 'build-tools;36.0.0'
-      - name: Verify hashes and both signatures
-        run: python3 scripts/verify-android-release.py
+      - name: Install the pinned bundle inspection tool
+        run: |
+          curl --fail --location --retry 3 https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar --output /tmp/protpeek-bundletool.jar
+          printf '%s  %s\n' a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29 /tmp/protpeek-bundletool.jar | sha256sum --check
+      - name: Confirm successful source build and WebView checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, pathlib, subprocess
+          data = json.loads(pathlib.Path('android/releases/release.json').read_text())
+          run_id = str(data['workflowRun'])
+          assert run_id.isdecimal(), 'Invalid build run ID'
+          endpoint = f"repos/{os.environ['GH_REPO']}/actions/runs/{run_id}"
+          run = json.loads(subprocess.check_output(['gh', 'api', endpoint]))
+          assert run['head_sha'] == data['sourceCommit'], 'Build commit differs'
+          assert run['path'] == '.github/workflows/android.yml', 'Unexpected source workflow'
+          assert run['status'] == 'completed' and run['conclusion'] == 'success', 'Android build and checks must pass'
+          jobs = json.loads(subprocess.check_output(['gh', 'api', endpoint + '/jobs?per_page=100']))['jobs']
+          expected = {'build', 'web-check', 'emulator'}
+          assert expected.issubset({job['name'] for job in jobs if job['conclusion'] == 'success'}), 'Missing successful Android checks'
+          print('Confirmed tested source build', run_id, data['sourceCommit'])
+          PYCODE
+      - name: Verify packages, hashes and both signatures
+        run: python3 scripts/verify-android-release.py --bundletool-jar /tmp/protpeek-bundletool.jar
       - name: Read the verified release version
         run: |
           python3 - <<'PY'

@@ -67,6 +67,7 @@ jobs:
           cp android/app/build/outputs/bundle/release/app-release.aab .output/android-native/
           cp android/app/build/outputs/apk/release/app-release-unsigned.apk .output/android-native/
           cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" .output/android-native/
+          cp "$ANDROID_HOME/build-tools/36.0.0/aapt2" .output/android-native/
           curl --fail --location --retry 3 https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar --output .output/android-native/bundletool.jar
           python3 - <<'PY'
           import hashlib, json, os, pathlib

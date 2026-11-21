@@ -530,6 +530,9 @@ public final class MainActivity extends Activity {
         });
     }
 
+    // API33+ gestures use the OnBackInvokedCallback registered in onCreate().
+    // Keep this override exclusively as the platform fallback for API26–32.
+    @SuppressLint("GestureBackNavigation")
     @Override public void onBackPressed() { handleBack(); }
 
     @Override protected void onPause() {

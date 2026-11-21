@@ -66,7 +66,10 @@ certificate is `signing-certificate.pem`; SHA-256 fingerprint:
 
 Signed artifacts and their hashes/build provenance are recorded in
 `releases/release.json`. `scripts/verify-android-release.py` verifies both
-signatures using the public certificate; no private key is required in CI.
+signatures and embedded package/version identities using the public certificate,
+SDK aapt2 and checksum-pinned bundletool 1.18.3. No private key is required in CI.
+Publication also checks that the recorded source workflow completed its build,
+mobile UI checks and native WebView test successfully.
 The publication workflow attaches the verified APK and AAB to the
 `android-v0.1.0` GitHub prerelease.
 
