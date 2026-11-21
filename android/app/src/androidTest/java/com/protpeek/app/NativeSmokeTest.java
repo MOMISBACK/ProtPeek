@@ -11,9 +11,12 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
+import android.util.Base64;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
@@ -24,10 +27,14 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.Test;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -35,11 +42,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /** Bundled WebView and native content-URI integration, with synthetic data only. */
 public final class NativeSmokeTest {
-    private static final String FIXTURE = "HEADER    PROTPEEK TEST                         31-AUG-26   FPRT\n"
-            + "ATOM      1  N   ALA A   5       0.000   0.000   0.000  1.00 10.00           N\n"
-            + "ATOM      2  CA  ALA A   5       1.450   0.000   0.000  1.00 10.00           C\n"
-            + "ATOM      3  C   ALA A   5       2.050   1.350   0.000  1.00 10.00           C\n"
-            + "HETATM    4 MG    MG B 101       5.000   0.000   0.000  1.00 20.00          MG\nTER\nEND\n";
+    // A continuous eight-residue trace has visible cartoon geometry, unlike a
+    // single amino acid. This is deliberately synthetic, not experimental data.
+    private static String fixturePdb() {
+        StringBuilder pdb = new StringBuilder("HEADER    PROTPEEK SYNTHETIC TEST\n");
+        String[] names = { "N", "CA", "C", "O" };
+        String[] elements = { "N", "C", "C", "O" };
+        double[] offsets = { -1.25, 0, 1.25, 1.65 };
+        int serial = 1;
+        for (int residue = 1; residue <= 8; residue++) {
+            double y = Math.sin(residue * 0.75) * 2;
+            double z = Math.cos(residue * 0.75) * 2;
+            for (int atom = 0; atom < names.length; atom++) {
+                pdb.append(String.format(Locale.US,
+                        "ATOM  %5d %4s ALA A%4d    %8.3f%8.3f%8.3f  1.00 10.00          %2s\n",
+                        serial++, names[atom], residue, (residue - 1) * 3.7 + offsets[atom],
+                        y + (atom == 3 ? 0.8 : 0), z, elements[atom]));
+            }
+        }
+        pdb.append("TER\n");
+        pdb.append(String.format(Locale.US,
+                "HETATM%5d MG    MG B 101    %8.3f%8.3f%8.3f  1.00 20.00          MG\n",
+                serial, 12.0, 5.0, 2.0));
+        return pdb.append("TER\nEND\n").toString();
+    }
 
     @Test public void bundledUiAndNativeContentUriOpenRealViewer() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
@@ -47,7 +73,7 @@ public final class NativeSmokeTest {
         assertTrue(directory.isDirectory() || directory.mkdirs());
         File fixture = new File(directory, "native-smoke.pdb");
         try (FileOutputStream output = new FileOutputStream(fixture)) {
-            output.write(FIXTURE.getBytes(StandardCharsets.UTF_8));
+            output.write(fixturePdb().getBytes(StandardCharsets.UTF_8));
         }
         Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".files", fixture);
         Intent open = new Intent(context, MainActivity.class).setAction(Intent.ACTION_VIEW)
@@ -70,8 +96,11 @@ public final class NativeSmokeTest {
 
             String viewerReady = "(() => { const c=document.querySelector('.viewer-host canvas'); "
                     + "return document.querySelector('.viewer-frame[data-viewer-state=\"ready\"]') "
-                    + "&& c && c.width>0 && c.height>0 && document.querySelectorAll('.sequence-layer .residue-cell').length>0; })()";
+                    + "&& c && c.width>0 && c.height>0 && document.querySelectorAll('.sequence-layer .residue-cell').length>=8; })()";
             awaitJs(scenario, viewerReady, 45000, "The queued launch URI did not reach the Mol* viewer");
+            awaitViewerPaint(scenario);
+            saveDiagnostics(context, scenario, "cold");
+            int coldForeground = saveScreenshot(context, scenario, "native-smoke-cold.png");
             // Also exercise an incoming VIEW while the same document is ready.
             assertEquals("true", js(scenario, "window.__PROTPEEK_WARM_IMPORTS__=0; "
                     + "window.addEventListener('protpeek:file-opened',()=>{window.__PROTPEEK_WARM_IMPORTS__++;}); true"));
@@ -83,7 +112,8 @@ public final class NativeSmokeTest {
                     45000, "The onNewIntent URI did not reach the existing Mol* viewer");
             assertEquals("false", js(scenario, "Boolean(document.querySelector('.android-load-status[data-error=\"true\"]'))"));
             awaitViewerPaint(scenario);
-            saveScreenshot(context, "native-smoke-portrait.png");
+            saveDiagnostics(context, scenario, "warm");
+            int warmForeground = saveScreenshot(context, scenario, "native-smoke-portrait.png");
 
             // Preserve the actual WebView and document when the device rotates.
             assertEquals("true", js(scenario, "window.__PROTPEEK_ROTATION_SMOKE__ = 'same-document'; true"));
@@ -110,8 +140,21 @@ public final class NativeSmokeTest {
             });
 
             awaitViewerPaint(scenario);
-            saveScreenshot(context, "native-smoke.png");
+            saveDiagnostics(context, scenario, "rotated");
+            int rotatedForeground = saveScreenshot(context, scenario, "native-smoke.png");
+            // The real Mol* offscreen export separates framebuffer failures
+            // from Android compositor/screenshot failures. Only SAF transport
+            // is intercepted; the application export action is unchanged.
+            int exportedForeground = saveMolecularPng(context, scenario);
+            awaitViewerPaint(scenario);
+            saveDiagnostics(context, scenario, "after-export");
+            int afterExportForeground = saveScreenshot(context, scenario, "native-smoke-after-export.png");
             fixture.delete();
+            assertTrue("The cold native molecular viewport is blank (foreground pixels=" + coldForeground + ")", coldForeground >= 100);
+            assertTrue("The warm native molecular viewport is blank (foreground pixels=" + warmForeground + ")", warmForeground >= 100);
+            assertTrue("The rotated native molecular viewport is blank (foreground pixels=" + rotatedForeground + ")", rotatedForeground >= 100);
+            assertTrue("The real Mol* PNG export is blank (foreground pixels=" + exportedForeground + ")", exportedForeground >= 100);
+            assertTrue("The native molecular viewport remains blank after export (foreground pixels=" + afterExportForeground + ")", afterExportForeground >= 100);
         }
     }
 
@@ -145,15 +188,119 @@ public final class NativeSmokeTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
     }
 
-    private static void saveScreenshot(Context context, String filename) throws Exception {
+    private static void saveDiagnostics(Context context, ActivityScenario<MainActivity> scenario, String stage) throws Exception {
+        String diagnostic = js(scenario, "(() => { const c=document.querySelector('.viewer-host canvas'); "
+                + "const host=document.querySelector('.viewer-host'); const rect=e=>{const r=e?.getBoundingClientRect(); "
+                + "return r?{x:r.x,y:r.y,width:r.width,height:r.height}:null;}; let glInfo; try { "
+                + "const g=c?.getContext('webgl2')||c?.getContext('webgl'); const ext=g?.getExtension('WEBGL_debug_renderer_info'); "
+                + "glInfo=g?{lost:g.isContextLost(),version:g.getParameter(g.VERSION),vendor:g.getParameter(g.VENDOR), "
+                + "renderer:g.getParameter(g.RENDERER),unmaskedVendor:ext?g.getParameter(ext.UNMASKED_VENDOR_WEBGL):null, "
+                + "unmaskedRenderer:ext?g.getParameter(ext.UNMASKED_RENDERER_WEBGL):null, "
+                + "drawingBuffer:[g.drawingBufferWidth,g.drawingBufferHeight],viewport:Array.from(g.getParameter(g.VIEWPORT)), "
+                + "attributes:g.getContextAttributes(),extensions:g.getSupportedExtensions()}:null; } catch(e){glInfo={error:String(e)};} "
+                + "const style=c?getComputedStyle(c):null; return {userAgent:navigator.userAgent, "
+                + "visibility:document.visibilityState,hasFocus:document.hasFocus(),viewport:[innerWidth,innerHeight],dpr:devicePixelRatio, "
+                + "viewerState:document.querySelector('.viewer-frame')?.dataset.viewerState, "
+                + "loading:document.querySelector('main.android-app')?.dataset.loading,host:rect(host),canvas:rect(c), "
+                + "canvasPixels:c?[c.width,c.height]:null,canvasStyle:style?{display:style.display,visibility:style.visibility,opacity:style.opacity}:null, "
+                + "rafCompleted:window.__PROTPEEK_PAINT_READY__,toast:document.querySelector('.android-toast')?.textContent, "
+                + "loadStatus:document.querySelector('.android-load-status')?.textContent,gl:glInfo, "
+                + "exportError:window.__PROTPEEK_EXPORT_ERROR__??null}; })()");
+        writeText(context, "viewer-" + stage + ".json", new JSONObject(diagnostic).toString(2));
+    }
+
+    private static File qaFile(Context context, String filename) {
+        File directory = new File(context.getExternalFilesDir(null), "qa");
+        assertTrue(directory.isDirectory() || directory.mkdirs());
+        return new File(directory, filename);
+    }
+
+    private static void writeText(Context context, String filename, String text) throws Exception {
+        try (FileOutputStream output = new FileOutputStream(qaFile(context, filename))) {
+            output.write(text.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private static int saveScreenshot(Context context, ActivityScenario<MainActivity> scenario, String filename) throws Exception {
+        JSONObject viewport = new JSONObject(js(scenario, "(() => { const r=document.querySelector('.viewer-host').getBoundingClientRect(); "
+                + "return {x:r.x,y:r.y,width:r.width,height:r.height,innerWidth}; })()"));
+        AtomicReference<int[]> nativeBounds = new AtomicReference<>();
+        scenario.onActivity(activity -> {
+            WebView view = findWebView(activity.findViewById(android.R.id.content));
+            assertNotNull(view);
+            int[] location = new int[2];
+            view.getLocationOnScreen(location);
+            nativeBounds.set(new int[] { location[0], location[1], view.getWidth() });
+        });
         Bitmap image = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
         assertNotNull(image);
-        File screenshots = new File(context.getExternalFilesDir(null), "qa");
-        assertTrue(screenshots.isDirectory() || screenshots.mkdirs());
-        try (FileOutputStream output = new FileOutputStream(new File(screenshots, filename))) {
+        int foreground;
+        try (FileOutputStream output = new FileOutputStream(qaFile(context, filename))) {
             assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, output));
+            int[] bounds = nativeBounds.get();
+            double scale = bounds[2] / viewport.getDouble("innerWidth");
+            // The center of the canvas excludes the surrounding shell, lower
+            // right toolbar, and corner camera axes. UI alone cannot pass.
+            int left = (int) (bounds[0] + (viewport.getDouble("x") + viewport.getDouble("width") * 0.2) * scale);
+            int top = (int) (bounds[1] + (viewport.getDouble("y") + viewport.getDouble("height") * 0.2) * scale);
+            int right = (int) (bounds[0] + (viewport.getDouble("x") + viewport.getDouble("width") * 0.8) * scale);
+            int bottom = (int) (bounds[1] + (viewport.getDouble("y") + viewport.getDouble("height") * 0.7) * scale);
+            foreground = foregroundPixels(image, left, top, right, bottom);
+            JSONObject proof = new JSONObject().put("foregroundPixels", foreground)
+                    .put("crop", new JSONArray(new int[] { left, top, right, bottom }))
+                    .put("bitmapWidth", image.getWidth()).put("bitmapHeight", image.getHeight());
+            writeText(context, filename + ".json", proof.toString(2));
         } finally {
             image.recycle();
+        }
+        return foreground;
+    }
+
+    private static int foregroundPixels(Bitmap bitmap, int left, int top, int right, int bottom) {
+        int count = 0;
+        for (int y = Math.max(0, top); y < Math.min(bitmap.getHeight(), bottom); y += 2) {
+            for (int x = Math.max(0, left); x < Math.min(bitmap.getWidth(), right); x += 2) {
+                int pixel = bitmap.getPixel(x, y);
+                if (Color.alpha(pixel) >= 200 && Math.min(Color.red(pixel), Math.min(Color.green(pixel), Color.blue(pixel))) < 235) count++;
+            }
+        }
+        return count;
+    }
+
+    private static int saveMolecularPng(Context context, ActivityScenario<MainActivity> scenario) throws Exception {
+        String intercepted = js(scenario, "(() => {window.__PROTPEEK_EXPORT_ORIGINAL__=window.ProtPeekAndroid; "
+                + "window.__PROTPEEK_EXPORT_PAYLOAD__=null; try {const original=window.ProtPeekAndroid; "
+                + "const capture=json=>{window.__PROTPEEK_EXPORT_PAYLOAD__=JSON.parse(json);}; "
+                + "const stub={openFile:()=>original.openFile(),ready:()=>original.ready(),exportFile:capture,shareFile:capture}; "
+                + "Object.defineProperty(window,'ProtPeekAndroid',{value:stub,writable:true,configurable:true}); "
+                + "return window.ProtPeekAndroid===stub;} catch(e){window.__PROTPEEK_EXPORT_ERROR__=String(e);return false;} })()");
+        try {
+            assertEquals("The instrumentation could not intercept only the native export transport", "true", intercepted);
+            assertEquals("true", js(scenario, "(() => { const menu=document.querySelector('[aria-label=\"Export structure or image\"]'); "
+                    + "const save=document.querySelector('[data-export-format=\"png\"][data-export-action=\"save\"]'); "
+                    + "if(!menu||!save)return false; menu.click(); save.click(); return true; })()"));
+            awaitJs(scenario, "typeof window.__PROTPEEK_EXPORT_PAYLOAD__?.base64==='string'", 45000,
+                    "The real Mol* image export did not reach the native transport");
+            Object encoded = new JSONTokener(js(scenario, "window.__PROTPEEK_EXPORT_PAYLOAD__.base64")).nextValue();
+            assertTrue(encoded instanceof String);
+            byte[] bytes = Base64.decode((String) encoded, Base64.DEFAULT);
+            try (FileOutputStream output = new FileOutputStream(qaFile(context, "molstar-export.png"))) {
+                output.write(bytes);
+            }
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            assertNotNull("Mol* did not export a valid PNG", bitmap);
+            try {
+                int foreground = foregroundPixels(bitmap, bitmap.getWidth() / 10, bitmap.getHeight() / 10,
+                        bitmap.getWidth() * 9 / 10, bitmap.getHeight() * 9 / 10);
+                writeText(context, "molstar-export.json", new JSONObject().put("foregroundPixels", foreground)
+                        .put("bitmapWidth", bitmap.getWidth()).put("bitmapHeight", bitmap.getHeight()).toString(2));
+                return foreground;
+            } finally {
+                bitmap.recycle();
+            }
+        } finally {
+            js(scenario, "window.ProtPeekAndroid=window.__PROTPEEK_EXPORT_ORIGINAL__; true");
+            saveDiagnostics(context, scenario, "export");
         }
     }
 
