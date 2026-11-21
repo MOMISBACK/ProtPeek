@@ -96,6 +96,9 @@ export class StructurePanel {
     this.#selectionInput.setAttribute('aria-describedby', 'selection-error');
     this.#selectionError.id = 'selection-error';
     this.#selectionError.setAttribute('aria-live', 'polite');
+    this.#customizationPanel.addEventListener('toggle', () => {
+      if (this.#customizationPanel.open) this.#revealCurrentChain();
+    });
 
     this.#buildEntityStrip();
     this.#buildInspector();
@@ -337,7 +340,6 @@ export class StructurePanel {
 
     const controlBar = element('div', { className: 'structure-controls' }, [
       modeControls,
-      selectionActions,
     ]);
 
     const selectButton = button('Select', { className: 'primary-small' });
@@ -414,6 +416,9 @@ export class StructurePanel {
       selectionLabel,
       this.#selectionInput,
       selectButton,
+    ]);
+    const selectionControls = element('div', { className: 'selection-controls' }, [
+      selectionActions,
       this.#selectionRepresentationSelect,
       palette,
     ]);
@@ -436,6 +441,7 @@ export class StructurePanel {
         controlBar,
         backgroundControl,
         selectionEditor,
+        selectionControls,
         this.#selectionError,
       ]),
       element('div', { className: 'sequence-section' }, [
@@ -463,6 +469,7 @@ export class StructurePanel {
       const visible = !this.#hiddenChains.has(chain.authId);
       const wrapper = element('div', { className: 'chain-control' });
       wrapper.classList.toggle('is-hidden', !visible);
+      wrapper.classList.toggle('is-current', chain.authId === this.#selectedChain);
       wrapper.setAttribute('role', 'group');
       wrapper.setAttribute('aria-label', `Chain ${chain.authId}`);
       const chip = button(`Chain ${chain.authId}`, {
@@ -470,6 +477,7 @@ export class StructurePanel {
         title: chain.entityDescription || `Chain ${chain.authId}`,
       });
       const selected = this.#selection.chains?.includes(chain.authId) ?? false;
+      wrapper.classList.toggle('is-selected', selected);
       chip.classList.toggle('is-selected', selected);
       chip.setAttribute(
         'aria-pressed',
@@ -533,6 +541,19 @@ export class StructurePanel {
       });
       this.#ligandList.append(chip);
     }
+    this.#revealCurrentChain();
+  }
+
+  #revealCurrentChain(): void {
+    if (this.entityStrip.clientWidth === 0) return;
+    const current = this.#chainList.querySelector<HTMLElement>('.chain-control.is-current');
+    if (current === null) return;
+    const viewport = this.entityStrip.getBoundingClientRect();
+    const bounds = current.getBoundingClientRect();
+    const delta = bounds.left < viewport.left
+      ? bounds.left - viewport.left
+      : Math.max(0, bounds.right - viewport.right);
+    if (delta !== 0) this.entityStrip.scrollLeft += delta;
   }
 
   #selectChain(chain: ChainInfo): void {
@@ -667,6 +688,7 @@ export class StructurePanel {
     this.#isolateButton.disabled = disabled;
     this.#selectionRepresentationSelect.disabled =
       disabled || this.#isolateActive;
+    for (const swatch of this.#colorSwatches.values()) swatch.disabled = disabled;
     this.#focusButton.classList.toggle('is-active', this.#focusActive);
     this.#focusButton.setAttribute('aria-pressed', String(this.#focusActive));
     this.#focusButton.title = this.#focusActive

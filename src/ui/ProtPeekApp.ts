@@ -34,6 +34,7 @@ import type {
 import { button, element, setHidden } from './components/dom';
 import { StructurePanel } from './components/StructurePanel';
 import { pageScanPresentation } from './pageScanPresentation';
+import { extensionPageForReviews } from './feedback';
 import { ViewerBackgroundPreference } from './viewerBackgroundPreference';
 
 type Loader = (signal: AbortSignal) => Promise<LoadedStructureData>;
@@ -42,6 +43,8 @@ type PanelSection = 'open' | 'page';
 interface ProtPeekAppOptions {
   feedbackFormUrl?: string;
   openFeedbackForm?: () => void;
+  sharePageUrl?: string;
+  openSharePage?: () => void;
   notice?: HTMLElement;
   onStructureLoaded?: () => void;
 }
@@ -89,6 +92,7 @@ export class ProtPeekApp {
   readonly #pageHero = element('div', { className: 'page-hero' });
   readonly #pageStatus = element('div', { className: 'page-scan-status' });
   readonly #feedbackLink?: HTMLAnchorElement;
+  readonly #shareLink?: HTMLAnchorElement;
   readonly #pageResults = element('div', { className: 'page-results' });
   readonly #pageResultsHeading = element('div', {
     className: 'page-section-title results-heading',
@@ -118,10 +122,10 @@ export class ProtPeekApp {
   readonly #errorText = element('span');
   readonly #retryButton = button('Retry', { className: 'text-button' });
   readonly #cancelButton = button('Cancel', { className: 'text-button' });
-  readonly #resetButton = button('Reset view', {
-    className: 'viewer-button',
-    title: 'Reset view',
-  });
+  readonly #resetButton = actionIcon(
+    'Reset view', 'viewer-button reset-view-button',
+    ['M3 11a9 9 0 1 1 2.7 7.3', 'M3 5v6h6', 'M9 12h6', 'M12 9v6'],
+  );
   readonly #downloadButton = actionIcon(
     'Download structure file as PDBx/mmCIF',
     'viewer-button download-button',
@@ -201,7 +205,7 @@ export class ProtPeekApp {
     if (options.feedbackFormUrl !== undefined) {
       this.#feedbackLink = element('a', {
         className: 'feedback-link',
-        text: 'Share feedback',
+        text: 'Feedback',
       });
       this.#feedbackLink.href = options.feedbackFormUrl;
       this.#feedbackLink.target = '_blank';
@@ -211,6 +215,21 @@ export class ProtPeekApp {
         this.#feedbackLink.addEventListener('click', event => {
           event.preventDefault();
           openFeedbackForm();
+        });
+      }
+    }
+    const sharePageUrl = options.sharePageUrl ?? (options.feedbackFormUrl === undefined
+      ? undefined : extensionPageForReviews(options.feedbackFormUrl));
+    if (sharePageUrl !== undefined) {
+      this.#shareLink = element('a', { className: 'share-link', text: 'Share', title: 'Share ProtPeek' });
+      this.#shareLink.href = sharePageUrl;
+      this.#shareLink.target = '_blank';
+      this.#shareLink.rel = 'noopener noreferrer';
+      const openSharePage = options.openSharePage;
+      if (openSharePage !== undefined) {
+        this.#shareLink.addEventListener('click', event => {
+          event.preventDefault();
+          openSharePage();
         });
       }
     }
@@ -323,6 +342,7 @@ export class ProtPeekApp {
       this.#pageStatus,
     );
     if (this.#feedbackLink !== undefined) this.#footer.append(this.#feedbackLink);
+    if (this.#shareLink !== undefined) this.#footer.append(this.#shareLink);
     this.#pageStatus.textContent = initialScan.status;
     this.#pageStatus.setAttribute('role', 'status');
     this.#pageStatus.setAttribute('aria-live', 'polite');
@@ -540,6 +560,9 @@ export class ProtPeekApp {
   }
 
   #setNavigationBusy(busy: boolean): void {
+    for (const tab of [this.#pageTab, this.#openTab, this.#viewStructureButton]) {
+      tab.setAttribute('aria-busy', String(busy));
+    }
     this.#pageTab.disabled = busy;
     this.#openTab.disabled = busy;
     this.#viewStructureButton.disabled = busy || !this.#hasStructure;

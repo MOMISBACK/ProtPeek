@@ -3,7 +3,7 @@ import readerToolbarIcon from '../../public/icon-toolbar-16.png?inline';
 import readerToolbarIconHighDpi from '../../public/icon-toolbar-32.png?inline';
 import { identifierFromContextMenuSelection } from '../extension/contextMenuSelection';
 import { parseStructureIdentifier } from '../structures/identifiers';
-import { FEEDBACK_FORM_URL } from '../ui/feedback';
+import { FEEDBACK_FORM_URL, ZOTERO_SHARE_PAGE_URL } from '../ui/feedback';
 import { resolveArticleAttachment, scanZoteroArticle, isSupportedAttachment } from './article';
 import { createZoteroBackgroundPreference } from './viewerBackgroundPreference';
 import type { ZoteroPreferenceHost } from './viewerBackgroundPreference';
@@ -107,6 +107,7 @@ async function open(itemId?: number, identifier?: string): Promise<Window | unde
       ? Promise.resolve({ tabId, title, error, structures: [] })
       : scanZoteroArticle(Zotero, attachment),
     openFeedbackForm: () => Zotero.launchURL(FEEDBACK_FORM_URL),
+    openSharePage: () => Zotero.launchURL(ZOTERO_SHARE_PAGE_URL),
     ...createZoteroBackgroundPreference(Zotero.Prefs),
   };
   // A non-modal native window keeps the PDF visible. The original ProtPeek UI

@@ -34,6 +34,7 @@ export interface ZoteroPanelBridge {
   initialIdentifier?: string;
   scan: () => Promise<ZoteroScanResult>;
   openFeedbackForm: () => void;
+  openSharePage?: () => void;
   getViewerBackground?: () => ViewerBackground;
   setViewerBackground?: (background: ViewerBackground) => void;
 }

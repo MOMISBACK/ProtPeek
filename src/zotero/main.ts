@@ -3,7 +3,7 @@ import './nativeTimers';
 import '../entrypoints/sidepanel/style.css';
 import './style.css';
 import { ProtPeekApp } from '../ui/ProtPeekApp';
-import { FEEDBACK_FORM_URL } from '../ui/feedback';
+import { FEEDBACK_FORM_URL, ZOTERO_SHARE_PAGE_URL } from '../ui/feedback';
 import { initializeZoteroBrowser } from './browserShim';
 import type { ZoteroPanelBridge } from './types';
 import { initializeZoteroSelectMenus } from './selectMenus';
@@ -20,6 +20,8 @@ if (bridge === undefined) {
   const app = new ProtPeekApp(root, {
     feedbackFormUrl: FEEDBACK_FORM_URL,
     openFeedbackForm: bridge.openFeedbackForm,
+    sharePageUrl: ZOTERO_SHARE_PAGE_URL,
+    ...(bridge.openSharePage === undefined ? {} : { openSharePage: bridge.openSharePage }),
   });
   for (const action of root.querySelectorAll('.download-button, .image-button')) action.remove();
   const disposeSelectMenus = initializeZoteroSelectMenus(root);

@@ -1,3 +1,12 @@
+# Browser 0.1.14
+
+- Compact Customize view and keep more space for the molecular viewer.
+- Group residue selection actions, style and colors together using the existing visible labels.
+- Distinguish the current chain from visibility and keep it in the horizontal list when selected.
+- Replace Reset view with an accessible icon.
+- Rename the footer review link to Feedback and add Share for the current browser’s extension listing.
+- Use a neutral cursor when Structure is unavailable because no structure is open.
+
 # Browser 0.1.13
 
 - Harmonize light and dark surfaces, text, borders and fields with the blue palette.
