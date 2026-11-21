@@ -1,3 +1,8 @@
+# Browser 0.1.16
+
+- Replace the separate footer links with one Share & feedback link to the current browser’s extension listing.
+- Align its text with the left edge of Customize view.
+
 # Browser 0.1.15
 
 - Keep the full sequence visible below the sticky Customize view header in very short panels.

@@ -253,8 +253,7 @@ summary {
   font-size: var(--font-size-label);
 }
 
-.feedback-link,
-.share-link {
+.feedback-link {
   display: inline-flex;
   min-height: 28px;
   align-items: center;
@@ -266,8 +265,7 @@ summary {
   text-decoration: none;
 }
 
-.feedback-link:hover,
-.share-link:hover {
+.feedback-link:hover {
   background: var(--surface-hover);
   color: var(--text);
 }
@@ -497,14 +495,16 @@ summary {
   align-items: center;
   gap: 1px;
   min-width: 0;
-  padding: 3px 6px;
+  padding: 3px 9px;
   border-top: 1px solid var(--border);
   background: var(--panel);
 }
 
 .app-footer:empty { display: none; }
-.app-footer .feedback-link,
-.app-footer .share-link { margin-top: 0; }
+.app-footer .feedback-link {
+  margin-top: 0;
+  padding-inline: 0;
+}
 
 
 .nav-tab {

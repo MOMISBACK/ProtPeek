@@ -139,10 +139,11 @@ describe('ProtPeekApp navigation and viewer controls', () => {
     await mount();
     const tabs = [...root.querySelectorAll('.topbar [role="tab"]')];
     expect(tabs.map(tab => tab.id)).toEqual(['page-tab', 'open-tab', 'structure-tab']);
-    expect(required(root, '.app-footer .feedback-link').textContent).toBe('Feedback');
-    const share = required<HTMLAnchorElement>(root, '.app-footer .share-link');
-    expect(share.textContent).toBe('Share');
-    expect(share.href).toBe(CHROME_EXTENSION_URL);
+    const feedback = required<HTMLAnchorElement>(root, '.app-footer .feedback-link');
+    expect(feedback.textContent).toBe('Share & feedback');
+    expect(feedback.href).toBe(CHROME_EXTENSION_URL);
+    expect(root.querySelectorAll('.app-footer a')).toHaveLength(1);
+    expect(root.querySelector('.share-link')).toBeNull();
     expect(required<HTMLButtonElement>(root, '#structure-tab').disabled).toBe(true);
     const badge = required<HTMLElement>(root, '.structure-count');
     expect(badge.textContent).toBe('1');
@@ -160,28 +161,29 @@ describe('ProtPeekApp navigation and viewer controls', () => {
     expect(badge.textContent).toBe('1');
   });
 
-  it('keeps Feedback on the Firefox reviews and Share on its extension listing', async () => {
+  it('uses a single Share & feedback link to the Firefox listing, not its reviews', async () => {
     await mount(false, { feedbackFormUrl: FIREFOX_REVIEWS_URL });
     const feedback = required<HTMLAnchorElement>(root, '.feedback-link');
-    const share = required<HTMLAnchorElement>(root, '.share-link');
-    expect(feedback.href).toBe(FIREFOX_REVIEWS_URL);
-    expect(share.href).toBe(FIREFOX_EXTENSION_URL);
-    expect(feedback.nextElementSibling).toBe(share);
-    expect(share.target).toBe('_blank');
-    expect(share.rel).toBe('noopener noreferrer');
+    expect(feedback.textContent).toBe('Share & feedback');
+    expect(feedback.href).toBe(FIREFOX_EXTENSION_URL);
+    expect(root.querySelectorAll('.app-footer a')).toHaveLength(1);
+    expect(feedback.childElementCount).toBe(0);
+    expect(feedback.target).toBe('_blank');
+    expect(feedback.rel).toBe('noopener noreferrer');
   });
 
-  it('supports a fixed native-host Share action without changing Feedback', async () => {
+  it('opens the native-host listing through Share without invoking the obsolete reviews callback', async () => {
     const feedback = vi.fn(), share = vi.fn();
     await mount(false, {
       sharePageUrl: 'https://github.com/MOMISBACK/ProtPeek',
       openSharePage: share, openFeedbackForm: feedback,
     });
-    required<HTMLAnchorElement>(root, '.share-link').click();
+    const link = required<HTMLAnchorElement>(root, '.feedback-link');
+    expect(link.href).toBe('https://github.com/MOMISBACK/ProtPeek');
+    expect(root.querySelectorAll('.app-footer a')).toHaveLength(1);
+    link.click();
     expect(share).toHaveBeenCalledOnce();
     expect(feedback).not.toHaveBeenCalled();
-    required<HTMLAnchorElement>(root, '.feedback-link').click();
-    expect(feedback).toHaveBeenCalledOnce();
   });
 
   it('keeps Reset view accessible as an icon and preserves its camera action', async () => {

@@ -92,7 +92,6 @@ export class ProtPeekApp {
   readonly #pageHero = element('div', { className: 'page-hero' });
   readonly #pageStatus = element('div', { className: 'page-scan-status' });
   readonly #feedbackLink?: HTMLAnchorElement;
-  readonly #shareLink?: HTMLAnchorElement;
   readonly #pageResults = element('div', { className: 'page-results' });
   readonly #pageResultsHeading = element('div', {
     className: 'page-section-title results-heading',
@@ -202,32 +201,16 @@ export class ProtPeekApp {
   constructor(root: HTMLElement, options: ProtPeekAppOptions = {}) {
     this.#root = root;
     this.#options = options;
-    if (options.feedbackFormUrl !== undefined) {
-      this.#feedbackLink = element('a', {
-        className: 'feedback-link',
-        text: 'Feedback',
-      });
-      this.#feedbackLink.href = options.feedbackFormUrl;
-      this.#feedbackLink.target = '_blank';
-      this.#feedbackLink.rel = 'noopener noreferrer';
-      const openFeedbackForm = options.openFeedbackForm;
-      if (openFeedbackForm !== undefined) {
-        this.#feedbackLink.addEventListener('click', event => {
-          event.preventDefault();
-          openFeedbackForm();
-        });
-      }
-    }
     const sharePageUrl = options.sharePageUrl ?? (options.feedbackFormUrl === undefined
       ? undefined : extensionPageForReviews(options.feedbackFormUrl));
     if (sharePageUrl !== undefined) {
-      this.#shareLink = element('a', { className: 'share-link', text: 'Share', title: 'Share ProtPeek' });
-      this.#shareLink.href = sharePageUrl;
-      this.#shareLink.target = '_blank';
-      this.#shareLink.rel = 'noopener noreferrer';
+      this.#feedbackLink = element('a', { className: 'feedback-link', text: 'Share & feedback' });
+      this.#feedbackLink.href = sharePageUrl;
+      this.#feedbackLink.target = '_blank';
+      this.#feedbackLink.rel = 'noopener noreferrer';
       const openSharePage = options.openSharePage;
       if (openSharePage !== undefined) {
-        this.#shareLink.addEventListener('click', event => {
+        this.#feedbackLink.addEventListener('click', event => {
           event.preventDefault();
           openSharePage();
         });
@@ -342,7 +325,6 @@ export class ProtPeekApp {
       this.#pageStatus,
     );
     if (this.#feedbackLink !== undefined) this.#footer.append(this.#feedbackLink);
-    if (this.#shareLink !== undefined) this.#footer.append(this.#shareLink);
     this.#pageStatus.textContent = initialScan.status;
     this.#pageStatus.setAttribute('role', 'status');
     this.#pageStatus.setAttribute('aria-live', 'polite');

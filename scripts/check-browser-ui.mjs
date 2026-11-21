@@ -413,6 +413,7 @@ async function checkInspector(client, label, requireScroll) {
     const panel = document.querySelector('.inspector');
     const workspace = document.querySelector('.viewer-workspace');
     const frame = document.querySelector('.viewer-frame');
+    const summary = document.querySelector('.customization-toggle');
     const result = {
       frameHeight: frame.getBoundingClientRect().height,
       inspectorHeight: panel.clientHeight,
@@ -420,6 +421,8 @@ async function checkInspector(client, label, requireScroll) {
       inspectorBottom: panel.getBoundingClientRect().bottom,
       workspaceBottom: workspace.getBoundingClientRect().bottom,
       overflowY: getComputedStyle(panel).overflowY,
+      footerLeft: document.querySelector('.app-footer .feedback-link').getBoundingClientRect().left,
+      summaryTextLeft: summary.getBoundingClientRect().left + parseFloat(getComputedStyle(summary).paddingLeft),
     };
     panel.scrollTop = panel.scrollHeight;
     return result;
@@ -427,6 +430,8 @@ async function checkInspector(client, label, requireScroll) {
   assert.ok(bounds.frameHeight >= 59, `${label}: the 3D viewer collapsed`);
   assert.ok(bounds.inspectorBottom <= bounds.workspaceBottom + 1, `${label}: inspector extends below the panel`);
   assert.equal(bounds.overflowY, 'auto', `${label}: inspector cannot scroll`);
+  assert.ok(Math.abs(bounds.footerLeft - bounds.summaryTextLeft) <= 1,
+    `${label}: footer text is not aligned with Customize view`);
   if (requireScroll) {
     assert.ok(bounds.inspectorScrollHeight > bounds.inspectorHeight + 1, `${label}: inspector clips controls instead of scrolling`);
     await settled(client);
@@ -562,40 +567,22 @@ async function checkExtension(client, origin, target) {
       target: link.target,
       rel: link.rel,
       visible: link.getClientRects().length > 0,
+      footerLinks: document.querySelectorAll('.app-footer a').length,
     };
   })()`);
   assert.ok(feedbackLink, 'The extension should have a feedback link in its footer');
-  const feedbackUrl = new URL(feedbackLink.href);
-  if (target.startsWith('firefox')) {
-    assert.equal(feedbackLink.href, FIREFOX_REVIEWS_URL, 'Firefox feedback should open its own extension reviews');
-  } else {
-    assert.equal(feedbackUrl.origin, 'https://chromewebstore.google.com', 'Feedback should open Chrome Web Store reviews');
-    assert.ok(feedbackUrl.pathname.endsWith('/mjiidagjpbabdncmgpabcijgndnbemck/reviews'), 'Feedback should open the ProtPeek reviews page');
-    assert.equal(feedbackUrl.searchParams.get('hl'), 'fr', 'Keep the requested review-page language');
-    assert.equal(feedbackUrl.searchParams.has('authuser'), false, 'Do not select a particular signed-in Google account');
-  }
-  assert.deepEqual({ ...feedbackLink, href: undefined }, {
-    text: 'Feedback',
+  const expectedExtensionUrl = target.startsWith('firefox')
+    ? 'https://addons.mozilla.org/firefox/addon/protpeek/'
+    : 'https://chromewebstore.google.com/detail/protpeek-%E2%80%93-protein-struct/mjiidagjpbabdncmgpabcijgndnbemck';
+  assert.deepEqual(feedbackLink, {
+    text: 'Share & feedback',
     childElements: 0,
-    href: undefined,
+    href: expectedExtensionUrl,
     target: '_blank',
     rel: 'noopener noreferrer',
     visible: true,
-  }, 'The footer should show a plain-text link to the extension reviews');
-  const shareLink = await client.evaluate(`(() => {
-    const link = document.querySelector('.app-footer .share-link');
-    return link && { text: link.textContent, href: link.href,
-      target: link.target, rel: link.rel,
-      followsFeedback: link.previousElementSibling?.classList.contains('feedback-link'),
-      visible: link.getClientRects().length > 0 };
-  })()`);
-  assert.ok(shareLink, 'The footer should have an adjacent Share link');
-  const expectedShareUrl = target.startsWith('firefox')
-    ? 'https://addons.mozilla.org/firefox/addon/protpeek/'
-    : 'https://chromewebstore.google.com/detail/protpeek-%E2%80%93-protein-struct/mjiidagjpbabdncmgpabcijgndnbemck';
-  assert.deepEqual(shareLink, { text: 'Share', href: expectedShareUrl,
-    target: '_blank', rel: 'noopener noreferrer', followsFeedback: true, visible: true },
-  'Share should open the matching extension listing and stay beside Feedback');
+    footerLinks: 1,
+  }, 'The footer should show one plain-text Share & feedback link to the extension listing');
   report.checks.push({ name: `${target}-feedback-link-configuration` });
   await checkNavigationAndFooter(client, `${target}-initial`);
   await checkStructureCount(client, target);
