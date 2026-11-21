@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { extname, join, resolve, sep } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { URL } from 'node:url';
+import { Script } from 'node:vm';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const OUTPUT = join(ROOT, '.output/android-ui-check');
@@ -27,6 +28,43 @@ const report = {
   limitations: ['Not a native Android WebView or emulator test', 'No installability or Play review claim', 'Scientific API records below are synthetic UI test fixtures'],
   checks: [], screenshots: [], exceptions: [], requests: [], unexpectedRequests: [], interceptionErrors: [],
 };
+
+function validateBrowserExpression(expression, label = 'generated-browser-expression') {
+  // Parse the actual string before it reaches Chromium. node --check cannot
+  // see syntax errors embedded in a JavaScript string/template literal.
+  new Script(`(\n${expression}\n)`, { filename: label });
+}
+
+async function checkGeneratedExpressionSyntax() {
+  assert.throws(() => validateBrowserExpression("document.querySelectorAll('.android-header button,\n.android-query')"),
+    SyntaxError, 'The expression audit must reject the original multiline-quoted-selector regression');
+  const ts = require('typescript');
+  const file = ts.createSourceFile(import.meta.filename, await readFile(import.meta.filename, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  let literals = 0, templates = 0;
+  function visit(node) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+      && node.expression.name.text === 'evaluate' && node.arguments[0]) {
+      const argument = node.arguments[0];
+      const line = file.getLineAndCharacterOfPosition(argument.getStart()).line + 1;
+      if (ts.isStringLiteralLike(argument)) {
+        validateBrowserExpression(argument.text, `static-browser-expression:${line}`);
+        literals++;
+      } else if (ts.isTemplateExpression(argument)) {
+        // Interpolations in this harness are values or property identifiers,
+        // not generated statements. A placeholder identifier checks syntax;
+        // evaluate() below also checks every fully interpolated runtime value.
+        const expression = argument.head.text + argument.templateSpans.map(span => `__PROTPEEK_SYNTAX_VALUE__${span.literal.text}`).join('');
+        validateBrowserExpression(expression, `browser-expression-template:${line}`);
+        templates++;
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(file);
+  new Script(nativeStub('AA=='), { filename: 'native-bridge-stub' });
+  report.checks.push({ name: 'generated-browser-expression-syntax', literals, templates, nativeStub: true });
+  return { literals, templates };
+}
 
 class Cdp {
   #socket;
@@ -79,6 +117,7 @@ class Cdp {
   }
 
   async evaluate(expression) {
+    validateBrowserExpression(expression);
     const result = await this.call('Runtime.evaluate', {
       expression,
       returnByValue: true,
@@ -161,10 +200,13 @@ async function viewport(client, size, theme) {
 }
 
 async function layout(client, name) {
+  const selectors = [
+    '.android-header button', '.android-query', '.android-organism',
+    '.android-primary', '.android-secondary', '.android-result-action', '.android-tools button',
+    '.compact-select', '.selection-input', '.primary-small', '.view-background-choice',
+  ].join(', ');
   const result = await client.evaluate(`(() => {
-    const visible = [...document.querySelectorAll('.android-header button, .android-query, .android-organism,
-      .android-primary, .android-secondary, .android-result-action, .android-tools button,
-      .compact-select, .selection-input, .primary-small, .view-background-choice')]
+    const visible = [...document.querySelectorAll(${JSON.stringify(selectors)})]
       .filter(el => el.getClientRects().length && el.getBoundingClientRect().height > 0);
     const outside = visible.filter(el => {
       const rect = el.getBoundingClientRect(); return rect.left < -1 || rect.right > innerWidth + 1;
@@ -519,6 +561,12 @@ async function checkTheme(client, origin, theme) {
   await checkPng(client, 'share', theme, 'black');
   if (theme === 'light') await checkSearch(client);
   report.checks.push({ name: `${theme}-native-ready-and-export-contracts`, nativeReady: true, cifAndPng: true, saveAndShare: true });
+}
+
+const expressionSyntax = await checkGeneratedExpressionSyntax();
+if (process.argv.includes('--syntax-only')) {
+  process.stdout.write(`Generated browser syntax passed: ${expressionSyntax.literals} literals, ${expressionSyntax.templates} templates, native bridge stub.\n`);
+  process.exit(0);
 }
 
 await mkdir(OUTPUT, { recursive: true });

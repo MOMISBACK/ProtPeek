@@ -216,7 +216,7 @@ export class AndroidApp {
     this.#structureTab.onclick = () => this.#show('structure');
     this.#query.type = 'search'; this.#query.placeholder = 'Protein, gene, ID, DOI or article title';
     this.#query.id = 'android-query'; this.#organism.id = 'android-organism';
-    this.#query.maxLength = 500; this.#query.autocomplete = 'off'; this.#query.spellcheck = false;
+    this.#query.maxLength = 400; this.#query.autocomplete = 'off'; this.#query.spellcheck = false;
     this.#query.setAttribute('aria-label', 'Protein, gene, structure identifier or article');
     this.#organism.type = 'search'; this.#organism.placeholder = 'Organism for proteins, optional'; this.#organism.maxLength = 100;
     this.#organism.setAttribute('aria-label', 'Organism filter for protein results');

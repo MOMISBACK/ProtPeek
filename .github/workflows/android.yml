@@ -47,8 +47,6 @@ jobs:
       - run: npm test
       - run: npm run build:android:web
       - run: npm run verify:android:web
-      - name: Check mobile viewer and search UI
-        run: node scripts/check-android-web.mjs
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -91,6 +89,21 @@ jobs:
             android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           if-no-files-found: error
           retention-days: 14
+
+  web-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:android:web
+      - run: npm run verify:android:web
+      - name: Check mobile viewer and search UI
+        run: node scripts/check-android-web.mjs
       - uses: actions/upload-artifact@v7
         if: always()
         with:
