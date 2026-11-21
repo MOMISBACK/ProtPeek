@@ -4,6 +4,7 @@ set -euo pipefail
 mkdir -p .output/android-emulator
 collect_evidence() {
   adb logcat -d > .output/android-emulator/logcat.txt || true
+  adb exec-out screencap -p > .output/android-emulator/screen.png || true
   adb pull /sdcard/Android/data/com.protpeek.app/files/qa/ .output/android-emulator/ || true
 }
 trap collect_evidence EXIT

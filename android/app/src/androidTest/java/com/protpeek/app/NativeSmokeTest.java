@@ -18,6 +18,7 @@ import android.view.ViewGroup;
 import android.webkit.WebView;
 
 import androidx.core.content.FileProvider;
+import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -41,7 +42,20 @@ public final class NativeSmokeTest {
 
     @Test public void bundledUiAndNativeContentUriOpenRealViewer() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+        File directory = new File(context.getCacheDir(), "shared/smoke");
+        assertTrue(directory.isDirectory() || directory.mkdirs());
+        File fixture = new File(directory, "native-smoke.pdb");
+        try (FileOutputStream output = new FileOutputStream(fixture)) {
+            output.write(FIXTURE.getBytes(StandardCharsets.UTF_8));
+        }
+        Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".files", fixture);
+        Intent open = new Intent(context, MainActivity.class).setAction(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "chemical/x-pdb")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        // ActivityScenario identifies its Activity using Intent.filterEquals().
+        // Use the same VIEW intent for launch and onNewIntent so setIntent() in
+        // production does not make the harness ignore subsequent lifecycle events.
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(open)) {
             awaitJs(scenario, "document.readyState === 'complete' && document.querySelector('#app[data-ready=\"true\"]') !== null "
                     + "&& typeof window.ProtPeekAndroid.openFile === 'function'", 30000, "The bundled UI and native bridge did not become ready");
             assertEquals("\"https://appassets.androidplatform.net\"", js(scenario, "location.origin"));
@@ -53,21 +67,16 @@ public final class NativeSmokeTest {
                 assertTrue(!view.getSettings().getAllowContentAccess());
             });
 
-            File directory = new File(context.getCacheDir(), "shared/smoke");
-            assertTrue(directory.isDirectory() || directory.mkdirs());
-            File fixture = new File(directory, "native-smoke.pdb");
-            try (FileOutputStream output = new FileOutputStream(fixture)) {
-                output.write(FIXTURE.getBytes(StandardCharsets.UTF_8));
-            }
-            Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".files", fixture);
-            Intent open = new Intent(context, MainActivity.class).setAction(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, "chemical/x-pdb")
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            context.startActivity(open);
-            awaitJs(scenario, "(() => { const c=document.querySelector('.viewer-host canvas'); "
+            String viewerReady = "(() => { const c=document.querySelector('.viewer-host canvas'); "
                     + "return document.querySelector('.viewer-frame[data-viewer-state=\"ready\"]') "
-                    + "&& c && c.width>0 && c.height>0 && document.querySelectorAll('.sequence-layer .residue-cell').length>0; })()",
-                    45000, "The native content URI did not reach the Mol* viewer");
+                    + "&& c && c.width>0 && c.height>0 && document.querySelectorAll('.sequence-layer .residue-cell').length>0; })()";
+            awaitJs(scenario, viewerReady, 45000, "The queued launch URI did not reach the Mol* viewer");
+            // Also exercise an incoming VIEW while the same document is ready.
+            assertEquals("true", js(scenario, "window.__PROTPEEK_WARM_IMPORTS__=0; "
+                    + "window.addEventListener('protpeek:file-opened',()=>{window.__PROTPEEK_WARM_IMPORTS__++;}); true"));
+            context.startActivity(new Intent(open));
+            awaitJs(scenario, "window.__PROTPEEK_WARM_IMPORTS__===1 && (" + viewerReady + ")",
+                    45000, "The onNewIntent URI did not reach the existing Mol* viewer");
             assertEquals("false", js(scenario, "Boolean(document.querySelector('.android-load-status[data-error=\"true\"]'))"));
 
             // Preserve the actual WebView and document when the device rotates.
@@ -108,6 +117,10 @@ public final class NativeSmokeTest {
     }
 
     private static String js(ActivityScenario<MainActivity> scenario, String expression) throws InterruptedException {
+        return js(scenario, expression, 15000);
+    }
+
+    private static String js(ActivityScenario<MainActivity> scenario, String expression, long timeoutMs) throws InterruptedException {
         CountDownLatch result = new CountDownLatch(1);
         AtomicReference<String> value = new AtomicReference<>();
         scenario.onActivity(activity -> {
@@ -115,7 +128,9 @@ public final class NativeSmokeTest {
             if (view == null) { value.set("null"); result.countDown(); return; }
             view.evaluateJavascript(expression, answer -> { value.set(answer); result.countDown(); });
         });
-        assertTrue("WebView evaluation timed out", result.await(5, TimeUnit.SECONDS));
+        // A measured cold SwiftShader/HWUI frame exceeded five seconds. Allow
+        // its callback to finish while retaining the outer readiness deadline.
+        assertTrue("WebView evaluation timed out", result.await(timeoutMs, TimeUnit.MILLISECONDS));
         return value.get();
     }
 
@@ -123,7 +138,12 @@ public final class NativeSmokeTest {
         long end = SystemClock.elapsedRealtime() + timeout;
         String value = null;
         while (SystemClock.elapsedRealtime() < end) {
-            value = js(scenario, "Boolean(" + condition + ")");
+            while (scenario.getState() != Lifecycle.State.RESUMED && SystemClock.elapsedRealtime() < end)
+                SystemClock.sleep(25);
+            assertEquals("The test Activity did not resume", Lifecycle.State.RESUMED, scenario.getState());
+            long remaining = end - SystemClock.elapsedRealtime();
+            if (remaining <= 0) break;
+            value = js(scenario, "Boolean(" + condition + ")", Math.min(15000, remaining));
             if ("true".equals(value)) return;
             SystemClock.sleep(150);
         }
