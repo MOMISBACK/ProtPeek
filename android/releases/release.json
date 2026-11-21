@@ -1,0 +1,46 @@
+{
+  "applicationId": "com.protpeek.app",
+  "versionName": "0.1.0",
+  "versionCode": 1,
+  "sourceCommit": "1e4ed48e180a57c645bff042c2349f9c4b7d3888",
+  "workflowRun": "44912620802",
+  "certificateSha256": "72b3aeede171bec6ad684d1e207abe29b55909f9633b5e5546ccdefcb38fa685",
+  "unsignedSha256": {
+    "app-release.aab": "3936d6824312b8dcd68e1339ddac75d0788b41bdc143513004f2fc1e0f026021",
+    "app-release-unsigned.apk": "c95ef3338a9f815c906d581b9df356fef213c1a6892ed7955b65f667b8b7b928"
+  },
+  "validation": {
+    "javascriptTests": 485,
+    "javascriptSuites": 44,
+    "mobileUiChecks": 32,
+    "nativeEmulatorApi": 35,
+    "nativeEmulatorBuildType": "debug",
+    "nativeChecks": [
+      "bundled trusted-origin UI",
+      "native content-URI import",
+      "real Mol* canvas and residue sequence",
+      "loaded WebView preserved on orientation change",
+      "opaque molecular pixels in native views and real Molstar PNG export"
+    ],
+    "physicalDeviceTested": false,
+    "nativeZoteroGuiTested": false,
+    "nativeGpuBackend": "swangle",
+    "nativeOpaqueForegroundSamples": {
+      "cold": 2205,
+      "warm": 2227,
+      "landscape": 511,
+      "afterExport": 511,
+      "pngExport": 436
+    }
+  },
+  "files": {
+    "ProtPeek-Android-0.1.0.aab": {
+      "size": 2608069,
+      "sha256": "c0c1a30ad01ccd705b1465a737266ec9166dfdf65be1b724adfe97bf6fce12cb"
+    },
+    "ProtPeek-Android-0.1.0.apk": {
+      "size": 2643436,
+      "sha256": "2d282b773d68bf701ccaf421fa73d82cdf9acdfc94b5811d218b68a0f045208b"
+    }
+  }
+}

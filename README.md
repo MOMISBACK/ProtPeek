@@ -6,7 +6,7 @@ ProtPeek is a free, open-source protein-structure viewer for Firefox, Chromium, 
 
 It is intended for quick inspection while reading, not as a replacement for PyMOL, ChimeraX, Coot, or other full molecular-modelling tools.
 
-[Browser release 0.1.16](https://github.com/MOMISBACK/ProtPeek/releases/tag/browser-v0.1.16) · [Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.10/protpeek-zotero-0.1.10.xpi) · [Android prototype](./android/README.md) · [Privacy](./PRIVACY.md)
+[Browser release 0.1.16](https://github.com/MOMISBACK/ProtPeek/releases/tag/browser-v0.1.16) · [Chrome Web Store](https://chromewebstore.google.com/detail/protpeek/mjiidagjpbabdncmgpabcijgndnbemck) · [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/protpeek/) · [Zotero download](https://github.com/MOMISBACK/ProtPeek/releases/download/zotero-v0.1.10/protpeek-zotero-0.1.10.xpi) · [Android APK](https://github.com/MOMISBACK/ProtPeek/releases/download/android-v0.1.0/ProtPeek-Android-0.1.0.apk) · [Signed AAB](https://github.com/MOMISBACK/ProtPeek/releases/download/android-v0.1.0/ProtPeek-Android-0.1.0.aab) · [Privacy](./PRIVACY.md)
 
 The Zotero plugin is an installable prototype (0.1.10), with the shared blue interface and GroEL icon, top navigation, native rotation/expanded view, and native PNG/mmCIF Save As exports. It scans local PDF and HTML attachments and reuses the same Mol* viewer. See [installation and usage](./zotero/README.md), [release notes](./zotero/RELEASE_NOTES.md), and [validation limits](./zotero/VALIDATION.md).
 

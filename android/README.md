@@ -56,6 +56,7 @@ trusted-origin bridge and a FileProvider for explicitly shared exports.
 
 The `Android prototype` workflow builds unsigned release artifacts and runs web
 and Android WebView instrumentation checks. It never receives the signing key.
+See [validation results and limits](./VALIDATION.md).
 
 ## Signing and downloads
 
