@@ -155,17 +155,7 @@ jobs:
           ram-size: 3072M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            set -e
-            mkdir -p .output/android-emulator
-            APP_APK=$(find .output/android-test-apks -name app-debug.apk -print -quit)
-            TEST_APK=$(find .output/android-test-apks -name app-debug-androidTest.apk -print -quit)
-            adb install -r "$APP_APK"
-            adb install -r "$TEST_APK"
-            adb shell am instrument -w com.protpeek.app.test/androidx.test.runner.AndroidJUnitRunner | tee .output/android-emulator/instrumentation.txt
-            grep -E 'OK \([0-9]+ tests?\)' .output/android-emulator/instrumentation.txt
-            adb pull /sdcard/Android/data/com.protpeek.app/files/qa/ .output/android-emulator/ || true
-            adb logcat -d > .output/android-emulator/logcat.txt
+          script: bash scripts/check-android-emulator.sh
       - uses: actions/upload-artifact@v7
         if: always()
         with:
